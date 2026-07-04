@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+--bp-field: #142B42;
+--bp-field-deep: #0E1F32;
+--bp-panel: #1B3A5C;
+--bp-panel-raised: #21456C;
+--ink: #E9EEF3;
+--ink-dim: #9BB0C3;
+--line: rgba(233,238,243,0.14);
+--line-strong: rgba(233,238,243,0.28);
+--accent: #E8974A;
+--accent-dim: rgba(232,151,74,0.35);
+--cyan: #5FA8D3;
+--green: #6FCF97;
+--red: #E36B6B;
+--font-display: 'Barlow Condensed', sans-serif;
+--font-body: 'Inter', sans-serif;
+--font-mono: 'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+background:
+linear-gradient(var(--line) 1px, transparent 1px) 0 0/28px 28px,
+linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/28px 28px,
+var(--bp-field);
+color:var(--ink);
+font-family:var(--font-body);
+min-height:100vh;
+}
+::selection{background:var(--accent-dim);}
+button{font-family:var(--font-body);cursor:pointer;}
+input,textarea,select{font-family:var(--font-body);}
+
+.shell{display:flex;min-height:100vh;}
+.sidebar{
+width:250px;flex-shrink:0;
+background:var(--bp-field-deep);
+border-right:1px solid var(--line-strong);
+display:flex;flex-direction:column;
+position:sticky;top:0;height:100vh;
+}
+.brand{
+padding:20px 18px 14px;
+border-bottom:1px solid var(--line);
+}
+.brand-mark{
+font-family:var(--font-display);
+font-size:22px;font-weight:700;letter-spacing:0.06em;
+text-transform:uppercase;color:var(--ink);
+display:flex;align-items:center;gap:8px;
+}
+.brand-mark .crosshair{width:16px;height:16px;position:relative;flex-shrink:0;}
+.brand-mark .crosshair::before,.brand-mark .crosshair::after{
+content:'';position:absolute;background:var(--accent);
+}
+.brand-mark .crosshair::before{width:100%;height:2px;top:7px;left:0;}
+.brand-mark .crosshair::after{height:100%;width:2px;left:7px;top:0;}
+.brand-sub{font-family:var(--font-mono);font-size:10px;color:var(--ink-dim);letter-spacing:0.08em;margin-top:4px;text-transform:uppercase;}
+
+.project-picker{padding:14px 14px 8px;}
+.project-picker label{
+font-family:var(--font-mono);font-size:10px;color:var(--ink-dim);
+text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:6px;
+}
+.project-select-row{display:flex;gap:6px;}
+select#projectSelect{
+flex:1;background:var(--bp-panel);border:1px solid var(--line-strong);
+color:var(--ink);padding:8px 8px;font-size:13px;border-radius:2px;
+}
+.icon-btn{
+background:var(--bp-panel);border:1px solid var(--line-strong);color:var(--ink-dim);
+width:34px;border-radius:2px;font-size:16px;line-height:1;
+}
+.icon-btn:hover{color:var(--accent);border-color:var(--accent-dim);}
+
+nav.tabs{flex:1;overflow-y:auto;padding:10px 0;}
+.tab-group-label{
+font-family:var(--font-mono);font-size:10px;color:var(--ink-dim);
+text-transform:uppercase;letter-spacing:0.08em;padding:12px 18px 6px;
+}
+.tab-btn{
+display:flex;align-items:center;gap:10px;
+width:100%;text-align:left;background:none;border:none;color:var(--ink-dim);
+padding:9px 18px;font-size:14px;border-left:3px solid transparent;
+}
+.tab-btn .num{font-family:var(--font-mono);font-size:11px;color:var(--ink-dim);width:20px;flex-shrink:0;}
+.tab-btn:hover{background:rgba(255,255,255,0.03);color:var(--ink);}
+.tab-btn.active{color:var(--ink);border-left-color:var(--accent);background:rgba(255,255,255,0.04);}
+.tab-btn.active .num{color:var(--accent);}
+
+.google-status{
+padding:12px 14px;border-top:1px solid var(--line);
+font-family:var(--font-mono);font-size:11px;
+}
+.gstat-row{display:flex;align-items:center;gap:7px;color:var(--ink-dim);margin-bottom:8px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;}
+.dot.on{background:var(--green);}
+.btn-mini{
+width:100%;background:var(--bp-panel);border:1px solid var(--line-strong);
+color:var(--ink);padding:7px;font-size:11px;border-radius:2px;text-transform:uppercase;letter-spacing:0.04em;
+}
+.btn-mini:hover{border-color:var(--accent-dim);color:var(--accent);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.sheet{
+flex:1;margin:24px 24px 0;
+background:var(--bp-panel);
+border:1px solid var(--line-strong);
+border-radius:3px;position:relative;
+padding:28px 32px 20px;
+min-height:calc(100vh - 100px);
+}
+.sheet::before,.sheet::after,.sheet .cr-tl,.sheet .cr-br{position:absolute;width:14px;height:14px;pointer-events:none;}
+.corner{position:absolute;width:16px;height:16px;pointer-events:none;}
+.corner::before,.corner::after{content:'';position:absolute;background:var(--line-strong);}
+.corner.tl{top:8px;left:8px;}
+.corner.tr{top:8px;right:8px;}
+.corner.bl{bottom:8px;left:8px;}
+.corner.br{bottom:8px;right:8px;}
+.corner::before{width:100%;height:1px;top:0;left:0;}
+.corner::after{height:100%;width:1px;top:0;left:0;}
+
+.sheet-header{
+display:flex;justify-content:space-between;align-items:flex-start;
+border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px;
+}
+.sheet-title{font-family:var(--font-display);font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;}
+.sheet-title .idx{color:var(--accent);font-family:var(--font-mono);font-size:15px;margin-right:10px;}
+.sheet-meta{font-family:var(--font-mono);font-size:10px;color:var(--ink-dim);text-align:right;line-height:1.6;text-transform:uppercase;}
+
+.field-group{margin-bottom:18px;}
+.field-label{
+font-family:var(--font-mono);font-size:10px;color:var(--ink-dim);text-transform:uppercase;
+letter-spacing:0.08em;margin-bottom:6px;display:block;
+}
+textarea.freeform,input.field-input{
+width:100%;background:var(--bp-field-deep);border:1px solid var(--line-strong);
+color:var(--ink);padding:10px 12px;font-size:14px;border-radius:2px;resize:vertical;
+}
+textarea.freeform{min-height:110px;line-height:1.55;font-family:var(--font-body);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+
+.save-row{display:flex;align-items:center;gap:10px;margin-top:6px;}
+.btn{
+background:var(--accent);border:none;color:#1B2430;font-weight:600;
+padding:9px 18px;border-radius:2px;font-size:13px;text-transform:uppercase;letter-spacing:0.03em;
+}
+.btn:hover{filter:brightness(1.08);}
+.btn.secondary{background:transparent;border:1px solid var(--line-strong);color:var(--ink);}
+.btn.secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn.danger{background:transparent;border:1px solid var(--red);color:var(--red);}
+.save-flash{font-family:var(--font-mono);font-size:11px;color:var(--green);opacity:0;transition:opacity .3s;}
+.save-flash.show{opacity:1;}
+
+.table-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;}
+.conn-banner{
+background:rgba(232,151,74,0.08);border:1px solid var(--accent-dim);
+color:var(--ink-dim);padding:14px 16px;border-radius:2px;font-size:13px;margin-bottom:16px;
+}
+.conn-banner b{color:var(--accent);}
+table.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+table.data-table th{
+font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.05em;
+color:var(--ink-dim);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line-strong);
+}
+table.data-table td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+table.data-table td input,table.data-table td select{
+width:100%;background:transparent;border:1px solid transparent;color:var(--ink);
+padding:4px 6px;font-size:13px;border-radius:2px;
+}
+table.data-table td input:focus,table.data-table td select:focus{background:var(--bp-field-deep);border-color:var(--line-strong);outline:none;}
+.status-chip{font-family:var(--font-mono);font-size:10px;padding:3px 8px;border-radius:10px;text-transform:uppercase;display:inline-block;}
+.status-chip.flagged{background:rgba(227,107,107,0.15);color:var(--red);}
+.status-chip.reviewed{background:rgba(232,151,74,0.15);color:var(--accent);}
+.status-chip.resolved{background:rgba(111,207,151,0.15);color:var(--green);}
+.row-del{background:none;border:none;color:var(--ink-dim);font-size:15px;}
+.row-del:hover{color:var(--red);}
+
+.task-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+.task-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);}
+.task-row .txt{flex:1;font-size:14px;}
+.task-row.done .txt{text-decoration:line-through;color:var(--ink-dim);}
+.task-add{display:flex;gap:8px;margin-top:14px;}
+.task-add input{flex:1;}
+
+.sprint-entry{border:1px solid var(--line);border-radius:2px;padding:14px;margin-bottom:12px;}
+.sprint-entry .week{font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
+.sprint-entry .content{white-space:pre-wrap;font-size:13px;line-height:1.5;}
+
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:16px;}
+.photo-card{border:1px solid var(--line-strong);border-radius:2px;overflow:hidden;background:var(--bp-field-deep);}
+.photo-card img{width:100%;height:110px;object-fit:cover;display:block;background:#0b1926;}
+.photo-card .meta{padding:8px 9px;font-size:11px;color:var(--ink-dim);font-family:var(--font-mono);}
+.photo-card .meta .fn{color:var(--ink);font-family:var(--font-body);font-size:12px;margin-bottom:3px;word-break:break-word;}
+
+.title-block{
+margin:0 24px 24px;padding:12px 20px;background:var(--bp-field-deep);
+border:1px solid var(--line-strong);border-radius:3px;
+display:flex;justify-content:space-between;align-items:center;
+font-family:var(--font-mono);font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.04em;
+}
+.title-block .tb-item b{color:var(--ink);display:block;font-size:13px;text-transform:none;letter-spacing:0;margin-top:2px;}
+.title-block .tb-item{margin-right:28px;}
+
+.empty-state{
+text-align:center;padding:60px 20px;color:var(--ink-dim);
+}
+.empty-state .em-title{font-family:var(--font-display);font-size:20px;text-transform:uppercase;color:var(--ink);margin-bottom:8px;}
+
+.modal-overlay{
+position:fixed;inset:0;background:rgba(6,14,22,0.7);display:none;
+align-items:center;justify-content:center;z-index:100;
+}
+.modal-overlay.show{display:flex;}
+.modal{
+background:var(--bp-panel);border:1px solid var(--line-strong);border-radius:3px;
+padding:24px;width:420px;max-width:90vw;
+}
+.modal h3{font-family:var(--font-display);text-transform:uppercase;font-size:18px;margin:0 0 16px;}
+.modal .field-group{margin-bottom:14px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+<aside class="sidebar">
+<div class="brand">
+<div class="brand-mark"><span class="crosshair"></span>Site Ledger</div>
+<div class="brand-sub">Project Tracking — Rev A</div>
+</div>
+
+<div class="project-picker">
+<label>Active Project</label>
+<div class="project-select-row">
+<select id="projectSelect" onchange="App.switchProject(this.value)"></select>
+<button class="icon-btn" title="New project" onclick="App.openNewProjectModal()">+</button>
+</div>
+</div>
+
+<nav class="tabs" id="tabNav"></nav>
+
+<div class="google-status">
+<div class="gstat-row"><span class="dot" id="gDot"></span><span id="gStatusText">Google: not connected</span></div>
+<button class="btn-mini" onclick="App.openGoogleSetup()">Connect / Setup</button>
+</div>
+</aside>
+
+<main class="main">
+<div class="sheet" id="sheetContent">
+<!-- rendered per tab -->
+</div>
+<div class="title-block" id="titleBlock"></div>
+</main>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="newProjectModal">
+<div class="modal">
+<h3>New Project</h3>
+<div class="field-group">
+<label class="field-label">Project Name</label>
+<input class="field-input" id="npName" placeholder="e.g. 214 Ocean Ave">
+</div>
+<div class="field-group">
+<label class="field-label">Address</label>
+<input class="field-input" id="npAddress" placeholder="Street, City, State ZIP">
+</div>
+<div class="modal-actions">
+<button class="btn secondary" onclick="App.closeModal('newProjectModal')">Cancel</button>
+<button class="btn" onclick="App.createProject()">Create</button>
+</div>
+</div>
+</div>
+
+<!-- Google Setup Modal -->
+<div class="modal-overlay" id="googleSetupModal">
+<div class="modal" style="width:500px;">
+<h3>Google Connection</h3>
+<div class="field-group">
+<label class="field-label">OAuth Client ID</label>
+<input class="field-input" id="gClientId" placeholder="xxxxxxxx.apps.googleusercontent.com">
+</div>
+<div class="field-group">
+<label class="field-label">API Key</label>
+<input class="field-input" id="gApiKey" placeholder="AIza...">
+</div>
+<p style="font-size:12px;color:var(--ink-dim);line-height:1.6;">
+These come from your own Google Cloud project (free tier). See the setup notes provided with this app for the exact steps. Stored only in this browser.
+</p>
+<div class="modal-actions">
+<button class="btn secondary" onclick="App.closeModal('googleSetupModal')">Cancel</button>
+<button class="btn" onclick="App.saveGoogleConfig()">Save & Connect</button>
+</div>
+</div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+/* =========================================================
+   SITE LEDGER — Construction Project Organizer
+   Storage: localStorage (in-app tabs) + Google Sheets (structured tabs) + Google Drive (photos/files)
+   ========================================================= */
+const SHEET_TABS = ['Doors','Windows','Budget','Site Conditions','Permits & Compliance','Sprints','Photos-Files'];
+const TAB_DEFS = [
+  {id:'overview', label:'Overview', num:'01', group:'IN-APP'},
+  {id:'scope', label:'Scope Summary', num:'02', group:'IN-APP'},
+  {id:'doors', label:'Doors', num:'03', group:'SHEETS'},
+  {id:'windows', label:'Windows', num:'04', group:'SHEETS'},
+  {id:'budget', label:'Budget', num:'05', group:'SHEETS'},
+  {id:'conditions', label:'Site Conditions', num:'06', group:'SHEETS'},
+  {id:'permits', label:'Permits & Compliance', num:'07', group:'SHEETS'},
+  {id:'assumptions', label:'Assumptions & Exclusions', num:'08', group:'IN-APP'},
+  {id:'sprints', label:'Sprints', num:'09', group:'SHEETS'},
+  {id:'photos', label:'Photos / Files', num:'10', group:'SHEETS'},
+  {id:'tasks', label:'Next Steps / Tasks', num:'11', group:'IN-APP'},
+];
+
+const App = {
+  state: {
+    projects: [],
+    activeProjectId: null,
+    activeTab: 'overview',
+    google: { clientId:'', apiKey:'', connected:false, tokenClient:null, accessToken:null },
+  },
+
+  /* ---------- Boot ---------- */
+  init(){
+    this.loadFromStorage();
+    if(this.state.projects.length === 0){
+      this.seedCassStreet();
+    }
+    if(!this.state.activeProjectId && this.state.projects.length){
+      this.state.activeProjectId = this.state.projects[0].id;
+    }
+    this.loadGoogleConfig();
+    this.renderSidebar();
+    this.renderTabNav();
+    this.renderTab();
+    this.renderTitleBlock();
+    window.addEventListener('load', ()=> this.tryInitGoogle());
+  },
+
+  loadFromStorage(){
+    const raw = localStorage.getItem('sl_projects');
+    this.state.projects = raw ? JSON.parse(raw) : [];
+    this.state.activeProjectId = localStorage.getItem('sl_active_project') || null;
+  },
+  persistProjects(){
+    localStorage.setItem('sl_projects', JSON.stringify(this.state.projects));
+  },
+  persistActive(){
+    localStorage.setItem('sl_active_project', this.state.activeProjectId);
+  },
+
+  seedCassStreet(){
+    const id = 'proj_' + Date.now();
+    const project = {
+      id, name:'1058 Cass St', address:'1058 Cass St, Monterey, CA 93940',
+      sheetId:'', driveFolderId:'', createdAt: new Date().toISOString(),
+      data: {
+        overview: {
+          sf:'925', revision:'Revision 3', preparedFor:'GC bid review',
+          notes:'Full cosmetic remodel. No layout changes, no wall relocations, no structural framing changes, except rear deck (full demo/rebuild). Updated per owner RFI responses: kitchen plumbing/laundry conversion, electrical/lighting, door and window adjustments, exterior finish.'
+        },
+        scopeSummary: `New cabinets and countertops — kitchen and bath (full demo and replace)
+New appliances — range and refrigerator (full demo and replace)
+New flooring throughout (925 SF) — resilient/LVP in living areas and bedrooms, tile in wet areas
+New plumbing fixtures — full demo & replace: 2 toilets, tub/shower combo, 2 sinks, kitchen sink/faucet
+Sheetrock patching throughout (tape, texture, sand ready for paint)
+1/4" sheetrock over existing paneling — approx 2/3 of house wall area
+Frame and sheetrock over 3 existing skylight wells (Living Room, Kitchen, Bedroom 2)
+Demo and full structural rebuild of existing 5'x10' rear deck
+10 retrofit vinyl windows (off-the-shelf) — full-house replacement, incl. removal of 1 through-window AC unit
+12 doors (off-the-shelf) — 2 exterior fiberglass, 1 exterior French-style pair, 9 interior hollow-core; Door #6 removed from scope (infill)
+Kitchen (west corner) — re-plumb for stacked washer/dryer (owner-supplied unit)
+Electrical — demo existing fixtures (except Vestibule/Utility); new recessed can lighting on new dedicated circuit(s); knob-and-tube not disturbed
+Demo existing built-in benches at rear exterior
+Exterior prep and paint — full exterior (stucco/wood siding mix)
+Interior prep and paint — full interior walls & ceilings`,
+        assumptions: `ASSUMPTIONS
+No structural, layout, or load-bearing wall changes, except rear deck (full demo/rebuild).
+Existing window/door openings assumed square/sound enough for retrofit; full-frame replacement not included unless required.
+Utility room toilet plumbing assumed to reuse existing drain/waste line, pending GC inspection.
+Electrical: demo + new recessed can lighting on dedicated circuits; knob-and-tube not tied into or disturbed. No panel upgrade or full rewire.
+All doors/windows stock/off-the-shelf; openings reframed to standard sizes rather than custom order.
+Interior and exterior prep/paint included. Sheetrock patch and paneling-cover areas include tape/texture/sand ready for paint.
+Pricing assumes no discovery of dry rot, water damage, active leaks, or out-of-square framing beyond what's flagged in Site Conditions.
+
+EXCLUSIONS (unless separately scoped)
+HVAC modifications
+Electrical panel upgrade or full rewire
+Roofing
+Exterior stucco repair (pending GC assessment)
+Landscaping / hardscape beyond the 5x10 deck footprint
+Fireplace retiling — optional add, not committed to scope`,
+        tasks: [
+          {id:'t1', text:'Review scope/budget with GC; reconcile against GC line-item bid', done:false},
+          {id:'t2', text:'GC to assess flagged site conditions before final pricing', done:false},
+          {id:'t3', text:'Confirm cabinet, countertop, flooring material selections', done:false},
+          {id:'t4', text:'Decide on fireplace retiling scope (optional add)', done:false},
+          {id:'t5', text:'Submit finalized scope and budget', done:false},
+        ],
+        seedTables: {
+          doors: [
+            ['1','Living Room','Exterior — front entry','Fiberglass, off-the-shelf','3\'0" x 6\'8"','Not Started'],
+            ['2','Office','Exterior — front entry','Fiberglass, off-the-shelf','2\'4" x 6\'8"','Not Started'],
+            ['3','Office','Interior — to hallway/living rm','Hollow-core w/ trim','2\'4" x 6\'8"','Not Started'],
+            ['4','Utility/Hallway','Interior','Hollow-core w/ trim','2\'0" x 6\'8"','Not Started'],
+            ['5','Bath','Interior','Hollow-core w/ trim','2\'0" x 6\'8"','Not Started'],
+            ['6','Bedroom 1','REMOVED — infill rough opening, match exterior finish','Infill','2\'8" x 6\'8" R.O.','Not Started'],
+            ['7','Bedroom 1','Interior — to Vestibule','Hollow-core w/ trim','2\'4" x 6\'8"','Not Started'],
+            ['8','Utility','Interior','Hollow-core w/ trim','2\'4" x 6\'8"','Not Started'],
+            ['9','Bedroom 2','Interior — to Vestibule','Hollow-core w/ trim','2\'6" x 6\'8"','Not Started'],
+            ['10','Kitchen','Interior','Hollow-core w/ trim','2\'8" x 6\'8"','Not Started'],
+            ['11','Kitchen','Interior','Hollow-core w/ trim','2\'6" x 6\'8"','Not Started'],
+            ['12','Kitchen','Interior','Hollow-core w/ trim','2\'8" x 6\'8"','Not Started'],
+            ['13','Vestibule','Exterior — rear entry, French-style, full-lite','Fiberglass French pair','64" R/O x 6\'8"','Not Started'],
+          ],
+          windows: [
+            ['1','Office','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['2','Office','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['3','Bedroom 1','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['4','Bedroom 1','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['5','Bedroom 1','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['6','Bedroom 2','Vinyl retrofit — remove existing AC unit first','Not Started'],
+            ['7','Bedroom 2','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['8','Kitchen','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['9','Living Room','Vinyl retrofit, off-the-shelf','Not Started'],
+            ['10','Living Room','Vinyl retrofit, off-the-shelf','Not Started'],
+          ],
+          budget: [
+            ['Base Remodel','New cabinets — kitchen + bath','Mid-grade stock/semi-custom','12000','20000','',''],
+            ['Base Remodel','New countertops — kitchen + bath','$40–75/sf installed','2400','4500','',''],
+            ['Base Remodel','New appliances — range + refrigerator','Mid-grade off-the-shelf','2500','5000','',''],
+            ['Base Remodel','New flooring — resilient/LVP ~700sf','$6–10/sf installed','4200','7000','',''],
+            ['Base Remodel','New flooring — tile, Bath+Utility ~100sf','$10–18/sf installed','1000','1800','',''],
+            ['Base Remodel','New flooring — kitchen ~125sf','$8–14/sf installed','1000','1750','',''],
+            ['Base Remodel','Plumbing fixtures — full demo & replace','Mid-grade + install','8500','14000','',''],
+            ['Base Remodel','Kitchen laundry conversion re-plumb','Drain reroute + supply valves','1200','2200','',''],
+            ['Base Remodel','Sheetrock patching, general','Tape/texture/sand ready for paint','2400','4600','',''],
+            ['Base Remodel','1/4" sheetrock over paneling ~2/3 area','$2.75–4.25/sf','4400','7500','',''],
+            ['Base Remodel','Frame & sheetrock over 3 skylight wells','$600–1200/well','1800','3600','',''],
+            ['Base Remodel','Demo & rebuild 5x10 rear deck','$30–60/sf + demo','2250','4250','',''],
+            ['Base Remodel','10 retrofit vinyl windows installed','$500–900/window','5000','9000','',''],
+            ['Base Remodel','Electrical — recessed can lighting + circuits','~10-12 fixtures + new circuits','3500','6500','',''],
+            ['Base Remodel','Demo exterior built-in benches','Labor + disposal','300','600','',''],
+            ['Base Remodel','Door #6 infill + exterior finish match','Carpentry + matched siding','600','1200','',''],
+            ['Base Remodel','Exterior prep & paint, full exterior','$2.50–4.25/sf ext.','5500','9500','',''],
+            ['Base Remodel','Interior prep & paint, full interior','$2.25–3.75/sf, ~2775sf','6000','10500','',''],
+            ['Door Package','Exterior fiberglass doors (#1, #2)','2 @ $1200–2000ea','2400','4000','',''],
+            ['Door Package','Exterior French-style pair (#13)','1 @ $2800–4500','2800','4500','',''],
+            ['Door Package','Interior hollow-core doors w/ trim (9)','9 @ $350–550ea','3150','4950','',''],
+            ['Permits','Plumbing, MPWMD, deck, electrical circuit permits','—','800','3600','',''],
+          ],
+          conditions: [
+            ['Active ceiling damage near utility/bath hallway','Exposed subfloor/joist visible at ceiling line, consistent with past/active leak','Flagged',today(),'Requires inspection before ceiling patching priced'],
+            ['Ceiling water staining, multiple locations','Rings suggesting repeated wetting near utility room/hallway beam','Flagged',today(),''],
+            ['Floor staining at utility room toilet base','Possible subfloor issue; recommend inspection before plumbing rough-in scope finalized','Flagged',today(),''],
+            ['Wall paneling staining, Bedroom 2','Low on wall, possibly moisture-related','Flagged',today(),''],
+            ['Exterior stucco cracking at front entry','Cosmetic vs structural significance TBD by GC','Flagged',today(),''],
+          ],
+          permits: [
+            ['Plumbing fixture replacement permit','City of Monterey','Not Started','MPWMD low-flow compliance documentation required'],
+            ['Deck rebuild permit','City of Monterey','Not Started','Full structural replacement likely triggers permit'],
+            ['Coastal zone / historic district review','City of Monterey Building Services','Not Started','Verify parcel status before finalizing bid'],
+            ['Window/door replacement permit review','City of Monterey','Not Started','Confirm given full-house count (10 windows, 12 doors)'],
+            ['New dedicated electrical circuit permit','City of Monterey','Not Started','Required for new can lighting circuits'],
+          ],
+        }
+      }
+    };
+    this.state.projects.push(project);
+    this.state.activeProjectId = id;
+    this.persistProjects();
+    this.persistActive();
+  },
+
+  /* ---------- Project management ---------- */
+  getActiveProject(){
+    return this.state.projects.find(p => p.id === this.state.activeProjectId);
+  },
+  switchProject(id){
+    this.state.activeProjectId = id;
+    this.persistActive();
+    this.renderTab();
+    this.renderTitleBlock();
+  },
+  openNewProjectModal(){
+    document.getElementById('npName').value='';
+    document.getElementById('npAddress').value='';
+    document.getElementById('newProjectModal').classList.add('show');
+  },
+  closeModal(id){ document.getElementById(id).classList.remove('show'); },
+  createProject(){
+    const name = document.getElementById('npName').value.trim();
+    const address = document.getElementById('npAddress').value.trim();
+    if(!name){ alert('Project name required.'); return; }
+    const id = 'proj_' + Date.now();
+    this.state.projects.push({
+      id, name, address, sheetId:'', driveFolderId:'', createdAt:new Date().toISOString(),
+      data:{ overview:{sf:'',revision:'',preparedFor:'',notes:''}, scopeSummary:'', assumptions:'', tasks:[] }
+    });
+    this.state.activeProjectId = id;
+    this.persistProjects();
+    this.persistActive();
+    this.closeModal('newProjectModal');
+    this.renderSidebar();
+    this.renderTab();
+    this.renderTitleBlock();
+  },
+  deleteActiveProject(){
+    const p = this.getActiveProject();
+    if(!p) return;
+    if(!confirm(`Delete "${p.name}"? This removes it from this browser only (Sheets/Drive data in Google is untouched).`)) return;
+    this.state.projects = this.state.projects.filter(x=>x.id!==p.id);
+    this.state.activeProjectId = this.state.projects.length ? this.state.projects[0].id : null;
+    this.persistProjects();
+    this.persistActive();
+    this.renderSidebar();
+    this.renderTab();
+    this.renderTitleBlock();
+  },
+
+  saveActiveProjectData(patch){
+    const p = this.getActiveProject();
+    if(!p) return;
+    Object.assign(p.data, patch);
+    this.persistProjects();
+    this.flashSave();
+  },
+  flashSave(){
+    const el = document.getElementById('saveFlash');
+    if(!el) return;
+    el.classList.add('show');
+    setTimeout(()=> el.classList.remove('show'), 1400);
+  },
+
+  /* ---------- Sidebar / Nav ---------- */
+  renderSidebar(){
+    const sel = document.getElementById('projectSelect');
+    sel.innerHTML = this.state.projects.map(p =>
+      `<option value="${p.id}" ${p.id===this.state.activeProjectId?'selected':''}>${escapeHtml(p.name)}</option>`
+    ).join('');
+  },
+  renderTabNav(){
+    const nav = document.getElementById('tabNav');
+    let html = '';
+    let lastGroup = null;
+    TAB_DEFS.forEach(t=>{
+      if(t.group !== lastGroup){
+        html += `<div class="tab-group-label">${t.group === 'IN-APP' ? 'In-App (this browser)' : 'Google Sheets'}</div>`;
+        lastGroup = t.group;
+      }
+      html += `<button class="tab-btn ${this.state.activeTab===t.id?'active':''}" onclick="App.setTab('${t.id}')">
+        <span class="num">${t.num}</span>${t.label}
+      </button>`;
+    });
+    nav.innerHTML = html;
+  },
+  setTab(id){
+    this.state.activeTab = id;
+    this.renderTabNav();
+    this.renderTab();
+  },
+  renderTitleBlock(){
+    const p = this.getActiveProject();
+    const tab = TAB_DEFS.find(t=>t.id===this.state.activeTab);
+    document.getElementById('titleBlock').innerHTML = p ? `
+      <div class="tb-item">Project<b>${escapeHtml(p.name)}</b></div>
+      <div class="tb-item">Sheet<b>${tab ? tab.num+' — '+tab.label : '—'}</b></div>
+      <div class="tb-item">Address<b>${escapeHtml(p.address||'—')}</b></div>
+      <div class="tb-item">Date<b>${today()}</b></div>
+      <span class="save-flash" id="saveFlash">SAVED</span>
+    ` : '';
+  },
+
+  /* ---------- Tab rendering router ---------- */
+  renderTab(){
+    const container = document.getElementById('sheetContent');
+    const p = this.getActiveProject();
+    this.renderTitleBlock();
+    if(!p){
+      container.innerHTML = `<div class="empty-state"><div class="em-title">No Project Selected</div>Create a project to begin.</div>`;
+      return;
+    }
+    const t = this.state.activeTab;
+    const corners = `<span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>`;
+    let body = '';
+    switch(t){
+      case 'overview': body = this.renderOverview(p); break;
+      case 'scope': body = this.renderScope(p); break;
+      case 'assumptions': body = this.renderAssumptions(p); break;
+      case 'tasks': body = this.renderTasks(p); break;
+      case 'doors': body = this.renderSheetTable(p,'doors',['#','Room','Type/Location','Material/Spec','Size','Status'],['','','','','',''],'select-status'); break;
+      case 'windows': body = this.renderSheetTable(p,'windows',['#','Room','Material/Spec','Status'],['','','',''],'select-status-3'); break;
+      case 'budget': body = this.renderSheetTable(p,'budget',['Section','Item','Basis','Low Est.','High Est.','Actual','Notes'],['','','','','','',''],'none'); break;
+      case 'conditions': body = this.renderSheetTable(p,'conditions',['Item','Description','Status','Date Flagged','Notes'],['','','','',''],'select-status-cond'); break;
+      case 'permits': body = this.renderSheetTable(p,'permits',['Permit/Requirement','Jurisdiction','Status','Notes'],['','','',''],'select-status-permit'); break;
+      case 'sprints': body = this.renderSprints(p); break;
+      case 'photos': body = this.renderPhotos(p); break;
+      default: body = '';
+    }
+    const tabDef = TAB_DEFS.find(x=>x.id===t);
+    container.innerHTML = `${corners}
+      <div class="sheet-header">
+        <div class="sheet-title"><span class="idx">${tabDef.num}</span>${tabDef.label}</div>
+        <div class="sheet-meta">${p.name}<br>${tabDef.group === 'SHEETS' ? 'Google Sheet — synced' : 'Local browser storage'}</div>
+      </div>
+      ${body}`;
+  },
+
+  /* ---------- IN-APP TABS ---------- */
+  renderOverview(p){
+    const d = p.data.overview || {};
+    return `
+      <div class="grid-2">
+        <div class="field-group">
+          <label class="field-label">Square Footage</label>
+          <input class="field-input" id="ov_sf" value="${escapeAttr(d.sf)}">
+        </div>
+        <div class="field-group">
+          <label class="field-label">Revision</label>
+          <input class="field-input" id="ov_rev" value="${escapeAttr(d.revision)}">
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Prepared For</label>
+        <input class="field-input" id="ov_pf" value="${escapeAttr(d.preparedFor)}">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Overview Notes</label>
+        <textarea class="freeform" id="ov_notes" style="min-height:180px;">${escapeHtml(d.notes)}</textarea>
+      </div>
+      <div class="save-row">
+        <button class="btn" onclick="App.saveOverview()">Save</button>
+        <button class="btn danger" onclick="App.deleteActiveProject()">Delete Project</button>
+      </div>`;
+  },
+  saveOverview(){
+    this.saveActiveProjectData({ overview:{
+      sf: document.getElementById('ov_sf').value,
+      revision: document.getElementById('ov_rev').value,
+      preparedFor: document.getElementById('ov_pf').value,
+      notes: document.getElementById('ov_notes').value,
+    }});
+  },
+
+  renderScope(p){
+    return `
+      <div class="field-group">
+        <label class="field-label">Scope Summary (free text — one item per line)</label>
+        <textarea class="freeform" id="scope_text" style="min-height:400px;">${escapeHtml(p.data.scopeSummary)}</textarea>
+      </div>
+      <div class="save-row"><button class="btn" onclick="App.saveScope()">Save</button></div>`;
+  },
+  saveScope(){
+    this.saveActiveProjectData({ scopeSummary: document.getElementById('scope_text').value });
+  },
+
+  renderAssumptions(p){
+    return `
+      <div class="field-group">
+        <label class="field-label">Assumptions & Exclusions</label>
+        <textarea class="freeform" id="assum_text" style="min-height:400px;">${escapeHtml(p.data.assumptions)}</textarea>
+      </div>
+      <div class="save-row"><button class="btn" onclick="App.saveAssumptions()">Save</button></div>`;
+  },
+  saveAssumptions(){
+    this.saveActiveProjectData({ assumptions: document.getElementById('assum_text').value });
+  },
+
+  renderTasks(p){
+    const tasks = p.data.tasks || [];
+    const rows = tasks.map(t => `
+      <div class="task-row ${t.done?'done':''}">
+        <input type="checkbox" ${t.done?'checked':''} onchange="App.toggleTask('${t.id}')">
+        <div class="txt">${escapeHtml(t.text)}</div>
+        <button class="row-del" onclick="App.deleteTask('${t.id}')">✕</button>
+      </div>`).join('') || `<div style="color:var(--ink-dim);padding:20px 0;">No tasks yet.</div>`;
+    return `
+      ${rows}
+      <div class="task-add">
+        <input class="field-input" id="newTaskInput" placeholder="Add a next step..." onkeydown="if(event.key==='Enter')App.addTask()">
+        <button class="btn" onclick="App.addTask()">Add</button>
+      </div>`;
+  },
+  addTask(){
+    const input = document.getElementById('newTaskInput');
+    const text = input.value.trim();
+    if(!text) return;
+    const p = this.getActiveProject();
+    p.data.tasks = p.data.tasks || [];
+    p.data.tasks.push({id:'t'+Date.now(), text, done:false});
+    this.persistProjects();
+    input.value='';
+    this.renderTab();
+  },
+  toggleTask(id){
+    const p = this.getActiveProject();
+    const t = p.data.tasks.find(x=>x.id===id);
+    if(t){ t.done = !t.done; this.persistProjects(); this.renderTab(); }
+  },
+  deleteTask(id){
+    const p = this.getActiveProject();
+    p.data.tasks = p.data.tasks.filter(x=>x.id!==id);
+    this.persistProjects();
+    this.renderTab();
+  },
+
+  /* ---------- SHEETS-BACKED TABS ---------- */
+  renderSheetTable(p, key, headers, blankRow, statusMode){
+    const connected = this.state.google.connected && p.sheetId;
+    const banner = !connected ? `<div class="conn-banner">
+      <b>Not synced to Google Sheets.</b> Showing local seed/draft data below. Connect Google and create this project's Sheet to sync and edit persistently.
+      <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.openGoogleSetup()">Connect Google</button></div>
+    </div>` : '';
+
+    const rows = (p.data.seedTables && p.data.seedTables[key]) ? p.data.seedTables[key] : [];
+
+    const statusOptionsMap = {
+      'select-status': ['Not Started','Ordered','Installed','N/A'],
+      'select-status-3': ['Not Started','Ordered','Installed','N/A'],
+      'select-status-cond': ['Flagged','GC Reviewed','Resolved'],
+      'select-status-permit': ['Not Started','Submitted','Approved'],
+    };
+
+    const rowsHtml = rows.map((r, ri) => {
+      const cells = headers.map((h, ci) => {
+        const isStatusCol = statusMode !== 'none' && ci === headers.length-1 && statusMode !== 'none' && (h.toLowerCase()==='status');
+        if(isStatusCol){
+          const opts = statusOptionsMap[statusMode] || [];
+          return `<td><select onchange="App.updateCell('${key}',${ri},${ci},this.value)">
+            ${opts.map(o=>`<option ${r[ci]===o?'selected':''}>${o}</option>`).join('')}
+          </select></td>`;
+        }
+        return `<td><input value="${escapeAttr(r[ci]||'')}" onchange="App.updateCell('${key}',${ri},${ci},this.value)"></td>`;
+      }).join('');
+      return `<tr>${cells}<td><button class="row-del" onclick="App.deleteRow('${key}',${ri})">✕</button></td></tr>`;
+    }).join('');
+
+    return `
+      ${banner}
+      <div class="table-toolbar">
+        <div></div>
+        <button class="btn secondary" onclick="App.addRow('${key}', ${headers.length})">+ Add Row</button>
+      </div>
+      <table class="data-table">
+        <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}<th></th></tr></thead>
+        <tbody>${rowsHtml || `<tr><td colspan="${headers.length+1}" style="color:var(--ink-dim);padding:16px 10px;">No rows yet.</td></tr>`}</tbody>
+      </table>`;
+  },
+  updateCell(key, rowIdx, colIdx, value){
+    const p = this.getActiveProject();
+    p.data.seedTables = p.data.seedTables || {};
+    p.data.seedTables[key] = p.data.seedTables[key] || [];
+    p.data.seedTables[key][rowIdx][colIdx] = value;
+    this.persistProjects();
+    this.flashSave();
+    // If connected to Sheets, push to Google here (see pushRowToSheet)
+    if(this.state.google.connected && p.sheetId){
+      this.pushTableToSheet(p, key);
+    }
+  },
+  addRow(key, numCols){
+    const p = this.getActiveProject();
+    p.data.seedTables = p.data.seedTables || {};
+    p.data.seedTables[key] = p.data.seedTables[key] || [];
+    p.data.seedTables[key].push(new Array(numCols).fill(''));
+    this.persistProjects();
+    this.renderTab();
+  },
+  deleteRow(key, rowIdx){
+    const p = this.getActiveProject();
+    p.data.seedTables[key].splice(rowIdx,1);
+    this.persistProjects();
+    this.renderTab();
+    if(this.state.google.connected && p.sheetId) this.pushTableToSheet(p, key);
+  },
+
+  renderSprints(p){
+    const sprints = p.data.sprints || [];
+    const list = sprints.slice().reverse().map(s => `
+      <div class="sprint-entry">
+        <div class="week">Week of ${escapeHtml(s.week)} — logged ${escapeHtml(s.logged)}</div>
+        <div class="content">${escapeHtml(s.content)}</div>
+      </div>`).join('') || `<div style="color:var(--ink-dim);">No sprints logged yet.</div>`;
+    return `
+      <div class="field-group">
+        <label class="field-label">Week Of</label>
+        <input class="field-input" id="sprint_week" placeholder="e.g. Jul 7 – Jul 13">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Paste Current Sprint Content</label>
+        <textarea class="freeform" id="sprint_content" style="min-height:160px;" placeholder="Paste sprint info here..."></textarea>
+      </div>
+      <div class="save-row"><button class="btn" onclick="App.addSprint()">Log Sprint</button></div>
+      <div style="margin-top:26px;border-top:1px solid var(--line);padding-top:18px;">
+        <label class="field-label">History</label>
+        ${list}
+      </div>`;
+  },
+  addSprint(){
+    const week = document.getElementById('sprint_week').value.trim();
+    const content = document.getElementById('sprint_content').value.trim();
+    if(!week || !content) return;
+    const p = this.getActiveProject();
+    p.data.sprints = p.data.sprints || [];
+    p.data.sprints.push({week, content, logged: today()});
+    this.persistProjects();
+    this.renderTab();
+  },
+
+  renderPhotos(p){
+    const connected = this.state.google.connected && p.driveFolderId;
+    const banner = !connected ? `<div class="conn-banner">
+      <b>Not connected to Drive.</b> Connect Google to upload and preview photos/files for this project.
+      <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.openGoogleSetup()">Connect Google</button></div>
+    </div>` : `<div class="field-group">
+      <input type="file" id="photoUpload" multiple onchange="App.handlePhotoUpload(event)">
+    </div>`;
+    const files = p.data.files || [];
+    const cards = files.map(f => `
+      <div class="photo-card">
+        <img src="${f.thumbUrl || ''}" onerror="this.style.display='none'">
+        <div class="meta"><div class="fn">${escapeHtml(f.name)}</div>Linked: ${escapeHtml(f.linkedTab||'General')}<br>${escapeHtml(f.date)}</div>
+      </div>`).join('');
+    return `${banner}<div class="photo-grid">${cards || '<div style="color:var(--ink-dim);">No files yet.</div>'}</div>`;
+  },
+  handlePhotoUpload(e){
+    alert('Upload wired to Drive API — requires an active Google connection with Drive scope granted. See setup notes.');
+  },
+
+  /* ---------- GOOGLE INTEGRATION ---------- */
+  loadGoogleConfig(){
+    const cfg = localStorage.getItem('sl_google_config');
+    if(cfg){
+      const parsed = JSON.parse(cfg);
+      this.state.google.clientId = parsed.clientId;
+      this.state.google.apiKey = parsed.apiKey;
+    }
+  },
+  openGoogleSetup(){
+    document.getElementById('gClientId').value = this.state.google.clientId || '';
+    document.getElementById('gApiKey').value = this.state.google.apiKey || '';
+    document.getElementById('googleSetupModal').classList.add('show');
+  },
+  saveGoogleConfig(){
+    const clientId = document.getElementById('gClientId').value.trim();
+    const apiKey = document.getElementById('gApiKey').value.trim();
+    if(!clientId || !apiKey){ alert('Both fields required.'); return; }
+    this.state.google.clientId = clientId;
+    this.state.google.apiKey = apiKey;
+    localStorage.setItem('sl_google_config', JSON.stringify({clientId, apiKey}));
+    this.closeModal('googleSetupModal');
+    this.tryInitGoogle(true);
+  },
+  tryInitGoogle(promptSignIn){
+    if(!this.state.google.clientId || !this.state.google.apiKey) return;
+    if(typeof gapi === 'undefined' || typeof google === 'undefined'){
+      setTimeout(()=>this.tryInitGoogle(promptSignIn), 400);
+      return;
+    }
+    gapi.load('client', async () => {
+      await gapi.client.init({
+        apiKey: this.state.google.apiKey,
+        discoveryDocs: [
+          'https://sheets.googleapis.com/$discovery/rest?version=v4',
+          'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+        ],
+      });
+      this.state.google.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: this.state.google.clientId,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+        callback: (resp) => {
+          if(resp.access_token){
+            this.state.google.accessToken = resp.access_token;
+            this.state.google.connected = true;
+            gapi.client.setToken({access_token: resp.access_token});
+            this.updateGoogleStatus();
+            this.renderTab();
+          }
+        }
+      });
+      if(promptSignIn){
+        this.state.google.tokenClient.requestAccessToken();
+      }
+      this.updateGoogleStatus();
+    });
+  },
+  updateGoogleStatus(){
+    const dot = document.getElementById('gDot');
+    const txt = document.getElementById('gStatusText');
+    if(this.state.google.connected){
+      dot.classList.add('on');
+      txt.textContent = 'Google: connected';
+    } else {
+      dot.classList.remove('on');
+      txt.textContent = this.state.google.clientId ? 'Google: configured, not signed in' : 'Google: not connected';
+    }
+  },
+
+  /* Placeholder sync methods — push local table state to the project's Google Sheet tab.
+     Requires p.sheetId to exist (created via a "Create Project Sheet" action once connected). */
+  async pushTableToSheet(p, tabKey){
+    if(!this.state.google.connected || !p.sheetId) return;
+    const tabNameMap = {
+      doors:'Doors', windows:'Windows', budget:'Budget',
+      conditions:'Site Conditions', permits:'Permits & Compliance'
+    };
+    const range = `${tabNameMap[tabKey]}!A2`;
+    const values = p.data.seedTables[tabKey];
+    try{
+      await gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: p.sheetId,
+        range,
+        valueInputOption: 'RAW',
+        resource: { values }
+      });
+    }catch(err){ console.error('Sheets sync failed', err); }
+  },
+};
+
+function today(){
+  const d = new Date();
+  return d.toLocaleDateString('en-US', {year:'numeric', month:'short', day:'numeric'});
+}
+function escapeHtml(str){
+  if(str === undefined || str === null) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+App.init();
+</script>
+</body>
+</html>
