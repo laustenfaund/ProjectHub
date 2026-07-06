@@ -839,12 +839,13 @@ computeBudgetTotals(p){
       el.innerHTML = this.buildTotalsHtml(this.computeBudgetTotals(p));
    },
    renderSheetTable(p, key, headers, blankRow, statusMode){
-    const connected = this.state.google.connected && p.sheetId;
-    const banner = !connected ? `<div class="conn-banner">
-      <b>Not synced to Google Sheets.</b> Showing local seed/draft data below. Connect Google and create this project's Sheet to sync and edit persistently.
-      <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.openGoogleSetup()">Connect Google</button></div>
-    </div>` : '';
-
+const authed = this.state.google.connected;
+     const connected = authed && p.sheetId;
+     const banner = !connected ? `<div class="conn-banner">
+       <b>Not synced to Google Sheets.</b> Showing local seed/draft data below. ${authed ? 'Create this project\'s Sheet to sync and edit persistently.' : 'Connect Google and create this project\'s Sheet to sync and edit persistently.'}
+     <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.connectOrCreateSheet()">${authed ? 'Create Google Sheet' : 'Connect Google'}</button></div>
+     </div>` : '';
+        
     const rows = (p.data.seedTables && p.data.seedTables[key]) ? p.data.seedTables[key] : [];
 
     const statusOptionsMap = {
@@ -1031,26 +1032,70 @@ computeBudgetTotals(p){
     }
   },
 
-  /* Placeholder sync methods — push local table state to the project's Google Sheet tab.
-     Requires p.sheetId to exist (created via a "Create Project Sheet" action once connected). */
-  async pushTableToSheet(p, tabKey){
-    if(!this.state.google.connected || !p.sheetId) return;
-    const tabNameMap = {
-      doors:'Doors', windows:'Windows', budget:'Budget',
-      conditions:'Site Conditions', permits:'Permits & Compliance'
-    };
-    const range = `${tabNameMap[tabKey]}!A2`;
-    const values = p.data.seedTables[tabKey];
-    try{
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: p.sheetId,
-        range,
-        valueInputOption: 'RAW',
-        resource: { values }
-      });
-    }catch(err){ console.error('Sheets sync failed', err); }
-  },
-};
+  /* ---------- Google Sheet creation & sync ---------- */
+       buildTabNameMap(p){
+         const map = { budget:'Budget', conditions:'Site Conditions', permits:'Permits & Compliance' };
+             (p.data.categories||[]).forEach(c => { map[c.id] = c.name; });
+                return map;
+       },
+     buildTabHeadersMap(p){
+     const map = {
+                                                    budget: ['Section','Item','Basis','Projected Cost','Actual Cost','Notes'],
+     conditions: ['Item','Description','Status','Date Flagged','Notes'],
+          permits: ['Permit/Requirement','Jurisdiction','Status','Notes'],
+     };
+          (p.data.categories||[]).forEach(c => { map[c.id] = STANDARD_HEADERS; });
+          return map;
+     },
+     async createProjectSheet(p){
+     if(!p) return;
+     if(!this.state.google.connected){ this.openGoogleSetup(); return; }
+       const nameMap = this.buildTabNameMap(p);
+          const headersMap = this.buildTabHeadersMap(p);
+          const sheetsReq = Object.keys(nameMap).map(key => ({ properties: { title: nameMap[key] } }));
+     try{
+     const res = await gapi.client.sheets.spreadsheets.create({
+     properties: { title: `${p.name} — Project Manager Sync` },
+     sheets: sheetsReq
+           });
+     p.sheetId = res.result.spreadsheetId;
+          this.persistProjects();
+          for(const key of Object.keys(nameMap)){
+               const headers = headersMap[key];
+               const rows = (p.data.seedTables && p.data.seedTables[key]) ? p.data.seedTables[key] : [];
+               await gapi.client.sheets.spreadsheets.values.update({
+     spreadsheetId: p.sheetId,
+     range: `${nameMap[key]}!A1`,
+                    valueInputOption: 'RAW',
+                    resource: { values: [headers, ...rows] }
+               });
+     }
+          this.renderTab();
+     }catch(err){ console.error('Create sheet failed', err); alert('Could not create the Google Sheet. Check the browser console for details.'); }
+     },
+     connectOrCreateSheet(){
+     const p = this.getActiveProject();
+     if(!this.state.google.connected){ this.openGoogleSetup(); }
+          else if(p){ this.createProjectSheet(p); }
+     },
+     async pushTableToSheet(p, tabKey){
+          if(!this.state.google.connected || !p.sheetId) return;
+          const tabNameMap = this.buildTabNameMap(p);
+          const sheetName = tabNameMap[tabKey];
+          if(!sheetName) return;
+          const range = `${sheetName}!A2`;
+          const values = p.data.seedTables[tabKey];
+          try{
+               await gapi.client.sheets.spreadsheets.values.update({
+           spreadsheetId: p.sheetId,
+     range,
+     valueInputOption: 'RAW',
+     resource: { values }
+     });
+     }catch(err){ console.error('Sheets sync failed', err); }
+     },
+     
+       };
 
 function today(){
   const d = new Date();
