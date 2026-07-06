@@ -1003,7 +1003,7 @@ const authed = this.state.google.connected;
       });
       this.state.google.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: this.state.google.clientId,
-        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file',
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
         callback: (resp) => {
           if(resp.access_token){
             this.state.google.accessToken = resp.access_token;
@@ -1047,6 +1047,18 @@ const authed = this.state.google.connected;
           (p.data.categories||[]).forEach(c => { map[c.id] = STANDARD_HEADERS; });
           return map;
      },
+async findOrCreateFolder(name, parentId){
+     const safeName = name.replace(/'/g, "\\'");
+     const parentClause = parentId ? (" and '" + parentId + "' in parents") : " and 'root' in parents";
+     const q = "mimeType='application/vnd.google-apps.folder' and name='" + safeName + "' and trashed=false" + parentClause;
+     const listRes = await gapi.client.drive.files.list({ q: q, fields: 'files(id,name)' });
+                                                                                            if(listRes.result.files && listRes.result.files.length) return listRes.result.files[0].id;
+     const createRes = await gapi.client.drive.files.create({
+     resource: { name: name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : [] },
+     fields: 'id'
+     });
+     return createRes.result.id;
+     },
      async createProjectSheet(p){
      if(!p) return;
      if(!this.state.google.connected){ this.openGoogleSetup(); return; }
@@ -1054,11 +1066,14 @@ const authed = this.state.google.connected;
           const headersMap = this.buildTabHeadersMap(p);
           const sheetsReq = Object.keys(nameMap).map(key => ({ properties: { title: nameMap[key] } }));
      try{
+          const ongoingId = await this.findOrCreateFolder('Ongoing Projects', null);
+     const projectFolderId = await this.findOrCreateFolder(p.name, ongoingId);
      const res = await gapi.client.sheets.spreadsheets.create({
      properties: { title: `${p.name} — Project Manager Sync` },
      sheets: sheetsReq
            });
      p.sheetId = res.result.spreadsheetId;
+          await gapi.client.drive.files.update({ fileId: p.sheetId, addParents: projectFolderId, removeParents: 'root', fields: 'id,parents' });
           this.persistProjects();
           for(const key of Object.keys(nameMap)){
                const headers = headersMap[key];
