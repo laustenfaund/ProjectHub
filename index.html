@@ -166,6 +166,12 @@ padding:9px 18px;border-radius:2px;font-size:13px;text-transform:uppercase;lette
 .conn-banner{
 background:rgba(232,151,74,0.08);border:1px solid var(--accent-dim);
 color:var(--ink-dim);padding:14px 16px;border-radius:2px;font-size:13px;margin-bottom:16px;
+   .budget-totals{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+   .bt-box{flex:1;min-width:160px;background:var(--bp-field-deep);border:1px solid var(--line-strong);border-radius:3px;padding:12px 16px;}
+   .bt-label{display:block;font-family:var(--font-mono);font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+   .bt-value{display:block;font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--ink);}
+   .bt-variance.over .bt-value{color:var(--red);}
+   .bt-variance.under .bt-value{color:var(--green);}
 }
 .conn-banner b{color:var(--accent);}
 table.data-table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -459,31 +465,31 @@ Fireplace retiling — optional add, not committed to scope`,
       ['Kitchen','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
                                                                                             ['Living Room','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
       ['Living Room','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ],budget: [
-            ['Base Remodel','New cabinets — kitchen + bath','Mid-grade stock/semi-custom','12000','20000','',''],
-            ['Base Remodel','New countertops — kitchen + bath','$40–75/sf installed','2400','4500','',''],
-            ['Base Remodel','New appliances — range + refrigerator','Mid-grade off-the-shelf','2500','5000','',''],
-            ['Base Remodel','New flooring — resilient/LVP ~700sf','$6–10/sf installed','4200','7000','',''],
-            ['Base Remodel','New flooring — tile, Bath+Utility ~100sf','$10–18/sf installed','1000','1800','',''],
-            ['Base Remodel','New flooring — kitchen ~125sf','$8–14/sf installed','1000','1750','',''],
-            ['Base Remodel','Plumbing fixtures — full demo & replace','Mid-grade + install','8500','14000','',''],
-            ['Base Remodel','Kitchen laundry conversion re-plumb','Drain reroute + supply valves','1200','2200','',''],
-            ['Base Remodel','Sheetrock patching, general','Tape/texture/sand ready for paint','2400','4600','',''],
-            ['Base Remodel','1/4" sheetrock over paneling ~2/3 area','$2.75–4.25/sf','4400','7500','',''],
-            ['Base Remodel','Frame & sheetrock over 3 skylight wells','$600–1200/well','1800','3600','',''],
-            ['Base Remodel','Demo & rebuild 5x10 rear deck','$30–60/sf + demo','2250','4250','',''],
-            ['Base Remodel','10 retrofit vinyl windows installed','$500–900/window','5000','9000','',''],
-            ['Base Remodel','Electrical — recessed can lighting + circuits','~10-12 fixtures + new circuits','3500','6500','',''],
-            ['Base Remodel','Demo exterior built-in benches','Labor + disposal','300','600','',''],
-            ['Base Remodel','Door #6 infill + exterior finish match','Carpentry + matched siding','600','1200','',''],
-            ['Base Remodel','Exterior prep & paint, full exterior','$2.50–4.25/sf ext.','5500','9500','',''],
-            ['Base Remodel','Interior prep & paint, full interior','$2.25–3.75/sf, ~2775sf','6000','10500','',''],
-            ['Door Package','Exterior fiberglass doors (#1, #2)','2 @ $1200–2000ea','2400','4000','',''],
-            ['Door Package','Exterior French-style pair (#13)','1 @ $2800–4500','2800','4500','',''],
-            ['Door Package','Interior hollow-core doors w/ trim (9)','9 @ $350–550ea','3150','4950','',''],
-            ['Permits','Plumbing, MPWMD, deck, electrical circuit permits','—','800','3600','',''],
-          ],
-          conditions: [
+            ],budget: [
+               ['Base Remodel','New cabinets — kitchen + bath','Mid-grade stock/semi-custom','20000','',''],
+                  ['Base Remodel','New countertops — kitchen + bath','$40–75/sf installed','4500','',''],
+                  ['Base Remodel','New appliances — range + refrigerator','Mid-grade off-the-shelf','5000','',''],
+                  ['Base Remodel','New flooring — resilient/LVP ~700sf','$6–10/sf installed','7000','',''],
+                  ['Base Remodel','New flooring — tile, Bath+Utility ~100sf','$10–18/sf installed','1800','',''],
+                              ['Base Remodel','New flooring — kitchen ~125sf','$8–14/sf installed','1750','',''],
+                  ['Base Remodel','Plumbing fixtures — full demo & replace','Mid-grade + install','14000','',''],
+                  ['Base Remodel','Kitchen laundry conversion re-plumb','Drain reroute + supply valves','2200','',''],
+                                                                                                         ['Base Remodel','Sheetrock patching, general','Tape/texture/sand ready for paint','4600','',''],
+                  ['Base Remodel','1/4" sheetrock over paneling ~2/3 area','$2.75–4.25/sf','7500','',''],
+                  ['Base Remodel','Frame & sheetrock over 3 skylight wells','$600–1200/well','3600','',''],
+               ['Base Remodel','Demo & rebuild 5x10 rear deck','$30–60/sf + demo','4250','',''],
+                  ['Base Remodel','10 retrofit vinyl windows installed','$500–900/window','9000','',''],
+               ['Base Remodel','Electrical — recessed can lighting + circuits','~10-12 fixtures + new circuits','6500','',''],
+                  ['Base Remodel','Demo exterior built-in benches','Labor + disposal','600','',''],
+               ['Base Remodel','Door #6 infill + exterior finish match','Carpentry + matched siding','1200','',''],
+                  ['Base Remodel','Exterior prep & paint, full exterior','$2.50–4.25/sf ext.','9500','',''],
+                        ['Base Remodel','Interior prep & paint, full interior','$2.25–3.75/sf, ~2775sf','10500','',''],
+                  ['Door Package','Exterior fiberglass doors (#1, #2)','2 @ $1200–2000ea','4000','',''],
+                     ['Door Package','Exterior French-style pair (#13)','1 @ $2800–4500','4500','',''],
+                  ['Door Package','Interior hollow-core doors w/ trim (9)','9 @ $350–550ea','4950','',''],
+                                  ['Permits','Plumbing, MPWMD, deck, electrical circuit permits','—','3600','',''],
+             ],
+   conditions: [
             ['Active ceiling damage near utility/bath hallway','Exposed subfloor/joist visible at ceiling line, consistent with past/active leak','Flagged',today(),'Requires inspection before ceiling patching priced'],
             ['Ceiling water staining, multiple locations','Rings suggesting repeated wetting near utility room/hallway beam','Flagged',today(),''],
             ['Floor staining at utility room toilet base','Possible subfloor issue; recommend inspection before plumbing rough-in scope finalized','Flagged',today(),''],
@@ -670,7 +676,7 @@ buildTabList(p){
       case 'scope': body = this.renderScope(p); break;
       case 'assumptions': body = this.renderAssumptions(p); break;
       case 'tasks': body = this.renderTasks(p); break;
-      case 'budget': body = this.renderSheetTable(p,'budget',['Section','Item','Basis','Low Est.','High Est.','Actual','Notes'],['','','','','','',''],'none'); break;
+            case 'budget': body = this.renderBudgetDashboard(p); break;
       case 'conditions': body = this.renderSheetTable(p,'conditions',['Item','Description','Status','Date Flagged','Notes'],['','','','',''],'select-status-cond'); break;
       case 'permits': body = this.renderSheetTable(p,'permits',['Permit/Requirement','Jurisdiction','Status','Notes'],['','','',''],'select-status-permit'); break;
       case 'sprints': body = this.renderSprints(p); break;
@@ -785,7 +791,42 @@ buildTabList(p){
   },
 
   /* ---------- SHEETS-BACKED TABS ---------- */
-  renderSheetTable(p, key, headers, blankRow, statusMode){
+computeBudgetTotals(p){
+   const toNum = v => { const n = parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; };
+   let projected = 0, actual = 0;
+     const budgetRows = (p.data.seedTables && p.data.seedTables.budget) || [];
+   budgetRows.forEach(r=>{ projected += toNum(r[3]); actual += toNum(r[4]); });
+         const pIdx = STANDARD_HEADERS.indexOf('Projected Cost');
+   const aIdx = STANDARD_HEADERS.indexOf('Actual Cost');
+   (p.data.categories||[]).forEach(c=>{
+      const rows = (p.data.seedTables && p.data.seedTables[c.id]) || [];
+     rows.forEach(r=>{ projected += toNum(r[pIdx]); actual += toNum(r[aIdx]); });
+   });
+   return {projected, actual, variance: actual - projected};
+   },
+   buildTotalsHtml(totals){
+      const fmt = n => '$' + n.toLocaleString(undefined, {maximumFractionDigits:0});
+   const varClass = totals.variance > 0 ? 'over' : (totals.variance < 0 ? 'under' : '');
+   const varLabel = totals.variance > 0 ? 'OVER' : (totals.variance < 0 ? 'UNDER' : 'ON BUDGET');
+      const varSign = totals.variance > 0 ? '+' : '';
+      return `
+      <div class="bt-box"><span class="bt-label">Total Projected</span><span class="bt-value">${fmt(totals.projected)}</span></div>
+      <div class="bt-box"><span class="bt-label">Total Actual</span><span class="bt-value">${fmt(totals.actual)}</span></div>
+      <div class="bt-box bt-variance ${varClass}"><span class="bt-label">Variance</span><span class="bt-value">${varSign}${fmt(totals.variance)} — ${varLabel}</span></div>`;
+   },
+   renderBudgetDashboard(p){
+   const totals = this.computeBudgetTotals(p);
+   const table = this.renderSheetTable(p,'budget',['Section','Item','Basis','Projected Cost','Actual Cost','Notes'],['','','','','',''],'none');
+   return `<div class="budget-totals" id="budgetTotals">${this.buildTotalsHtml(totals)}</div>${table}`;
+   },
+   refreshBudgetTotals(){
+      const el = document.getElementById('budgetTotals');
+      if(!el) return;
+      const p = this.getActiveProject();
+      if(!p) return;
+      el.innerHTML = this.buildTotalsHtml(this.computeBudgetTotals(p));
+   },
+   renderSheetTable(p, key, headers, blankRow, statusMode){
     const connected = this.state.google.connected && p.sheetId;
     const banner = !connected ? `<div class="conn-banner">
       <b>Not synced to Google Sheets.</b> Showing local seed/draft data below. Connect Google and create this project's Sheet to sync and edit persistently.
@@ -834,6 +875,7 @@ buildTabList(p){
     p.data.seedTables[key][rowIdx][colIdx] = value;
     this.persistProjects();
     this.flashSave();
+     this.refreshBudgetTotals();
     // If connected to Sheets, push to Google here (see pushRowToSheet)
     if(this.state.google.connected && p.sheetId){
       this.pushTableToSheet(p, key);
