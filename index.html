@@ -348,6 +348,7 @@ const App = {
   init(){
     this.loadFromStorage();
      this.migrateLegacyCategories();
+     this.migrateLegacyBudget();
     if(this.state.projects.length === 0){
       this.seedCassStreet();
     }
@@ -389,8 +390,18 @@ const App = {
       }
    });
    this.persistProjects();
+         },
+   migrateLegacyBudget(){
+      this.state.projects.forEach(p=>{
+         if(!p.data || !p.data.seedTables || !p.data.seedTables.budget) return;
+         const rows = p.data.seedTables.budget;
+         if(rows.length && rows[0].length > 6){
+            p.data.seedTables.budget = rows.map(r=>[r[0]||'', r[1]||'', r[2]||'', r[4]||'', r[5]||'', r[6]||'']);
+         }
+      });
+      this.persistProjects();
    },
-
+   
   seedCassStreet(){
     const id = 'proj_' + Date.now();
     const project = {
