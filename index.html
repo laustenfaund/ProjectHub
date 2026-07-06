@@ -305,6 +305,21 @@ These come from your own Google Cloud project (free tier). See the setup notes p
 </div>
 </div>
 
+   <!-- New Category Modal -->
+   <div class="modal-overlay" id="newCategoryModal">
+      <div class="modal">
+         <h3>New Category</h3>
+      <div class="field-group">
+      <label class="field-label">Category Name</label>
+      <input class="field-input" id="ncName" placeholder="e.g. Cabinets, Flooring, Lighting Fixtures">
+      </div>
+      <div class="modal-actions">
+      <button class="btn secondary" onclick="App.closeModal('newCategoryModal')">Cancel</button>
+      <button class="btn" onclick="App.createCategory()">Create</button>
+      </div>
+      </div>
+   </div>
+
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script>
@@ -312,21 +327,8 @@ These come from your own Google Cloud project (free tier). See the setup notes p
    Project Manager — Construction Project Organizer
    Storage: localStorage (in-app tabs) + Google Sheets (structured tabs) + Google Drive (photos/files)
    ========================================================= */
-const SHEET_TABS = ['Doors','Windows','Budget','Site Conditions','Permits & Compliance','Sprints','Photos-Files'];
-const TAB_DEFS = [
-  {id:'overview', label:'Overview', num:'01', group:'IN-APP'},
-  {id:'scope', label:'Scope Summary', num:'02', group:'IN-APP'},
-  {id:'doors', label:'Doors', num:'03', group:'SHEETS'},
-  {id:'windows', label:'Windows', num:'04', group:'SHEETS'},
-  {id:'budget', label:'Budget', num:'05', group:'SHEETS'},
-  {id:'conditions', label:'Site Conditions', num:'06', group:'SHEETS'},
-  {id:'permits', label:'Permits & Compliance', num:'07', group:'SHEETS'},
-  {id:'assumptions', label:'Assumptions & Exclusions', num:'08', group:'IN-APP'},
-  {id:'sprints', label:'Sprints', num:'09', group:'SHEETS'},
-  {id:'photos', label:'Photos / Files', num:'10', group:'SHEETS'},
-  {id:'tasks', label:'Next Steps / Tasks', num:'11', group:'IN-APP'},
-];
-
+const STANDARD_HEADERS = ['Item / Room or Location','Description / Spec','Quantity or Size','Supplier','Lead Time','Order Date','Projected Cost','Actual Cost','Status'];
+   
 const App = {
   state: {
     projects: [],
@@ -338,6 +340,7 @@ const App = {
   /* ---------- Boot ---------- */
   init(){
     this.loadFromStorage();
+     this.migrateLegacyCategories();
     if(this.state.projects.length === 0){
       this.seedCassStreet();
     }
@@ -363,6 +366,23 @@ const App = {
   persistActive(){
     localStorage.setItem('sl_active_project', this.state.activeProjectId);
   },
+   migrateLegacyCategories(){
+   this.state.projects.forEach(p=>{
+      if(!p.data) return;
+      if(p.data.categories) return;
+      p.data.categories = [];
+      p.data.seedTables = p.data.seedTables || {};
+      if(p.data.seedTables.doors){
+         p.data.categories.push({id:'doors', name:'Doors'});
+         p.data.seedTables.doors = p.data.seedTables.doors.map(r=>[r[1]||'', ((r[2]||'') + (r[3]?' — '+r[3]:'')).replace(/^—\s*/,''), r[4]||'', '', '', '', '', '', r[5]||'']);
+      }
+      if(p.data.seedTables.windows){
+         p.data.categories.push({id:'windows', name:'Windows'});
+         p.data.seedTables.windows = p.data.seedTables.windows.map(r=>[r[1]||'', r[2]||'', '', '', '', '', '', '', r[3]||'']);
+      }
+   });
+   this.persistProjects();
+   },
 
   seedCassStreet(){
     const id = 'proj_' + Date.now();
@@ -412,35 +432,34 @@ Fireplace retiling — optional add, not committed to scope`,
           {id:'t4', text:'Decide on fireplace retiling scope (optional add)', done:false},
           {id:'t5', text:'Submit finalized scope and budget', done:false},
         ],
+         categories: [ {id:'doors', name:'Doors'}, {id:'windows', name:'Windows'} ],
         seedTables: {
           doors: [
-            ['1','Living Room','Exterior — front entry','Fiberglass, off-the-shelf','3\'0" x 6\'8"','Not Started'],
-            ['2','Office','Exterior — front entry','Fiberglass, off-the-shelf','2\'4" x 6\'8"','Not Started'],
-            ['3','Office','Interior — to hallway/living rm','Hollow-core w/ trim','2\'4" x 6\'8"','Not Started'],
-            ['4','Utility/Hallway','Interior','Hollow-core w/ trim','2\'0" x 6\'8"','Not Started'],
-            ['5','Bath','Interior','Hollow-core w/ trim','2\'0" x 6\'8"','Not Started'],
-            ['6','Bedroom 1','REMOVED — infill rough opening, match exterior finish','Infill','2\'8" x 6\'8" R.O.','Not Started'],
-            ['7','Bedroom 1','Interior — to Vestibule','Hollow-core w/ trim','2\'4" x 6\'8"','Not Started'],
-            ['8','Utility','Interior','Hollow-core w/ trim','2\'4" x 6\'8"','Not Started'],
-            ['9','Bedroom 2','Interior — to Vestibule','Hollow-core w/ trim','2\'6" x 6\'8"','Not Started'],
-            ['10','Kitchen','Interior','Hollow-core w/ trim','2\'8" x 6\'8"','Not Started'],
-            ['11','Kitchen','Interior','Hollow-core w/ trim','2\'6" x 6\'8"','Not Started'],
-            ['12','Kitchen','Interior','Hollow-core w/ trim','2\'8" x 6\'8"','Not Started'],
-            ['13','Vestibule','Exterior — rear entry, French-style, full-lite','Fiberglass French pair','64" R/O x 6\'8"','Not Started'],
-          ],
-          windows: [
-            ['1','Office','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['2','Office','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['3','Bedroom 1','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['4','Bedroom 1','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['5','Bedroom 1','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['6','Bedroom 2','Vinyl retrofit — remove existing AC unit first','Not Started'],
-            ['7','Bedroom 2','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['8','Kitchen','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['9','Living Room','Vinyl retrofit, off-the-shelf','Not Started'],
-            ['10','Living Room','Vinyl retrofit, off-the-shelf','Not Started'],
-          ],
-          budget: [
+['Living Room','Exterior — front entry — Fiberglass, off-the-shelf','3\'0" x 6\'8"','','','','','','Not Started'],
+   ['Office','Exterior — front entry — Fiberglass, off-the-shelf','2\'4" x 6\'8"','','','','','','Not Started'],
+   ['Office','Interior — to hallway/living rm — Hollow-core w/ trim','2\'4" x 6\'8"','','','','','','Not Started'],
+             ['Utility/Hallway','Interior — Hollow-core w/ trim','2\'0" x 6\'8"','','','','','','Not Started'],
+             ['Bath','Interior — Hollow-core w/ trim','2\'0" x 6\'8"','','','','','','Not Started'],
+             ['Bedroom 1','REMOVED — infill rough opening, match exterior finish — Infill','2\'8" x 6\'8" R.O.','','','','','','Not Started'],
+             ['Bedroom 1','Interior — to Vestibule — Hollow-core w/ trim','2\'4" x 6\'8"','','','','','','Not Started'],
+    ['Utility','Interior — Hollow-core w/ trim','2\'4" x 6\'8"','','','','','','Not Started'],
+             ['Bedroom 2','Interior — to Vestibule — Hollow-core w/ trim','2\'6" x 6\'8"','','','','','','Not Started'],
+             ['Kitchen','Interior — Hollow-core w/ trim','2\'8" x 6\'8"','','','','','','Not Started'],
+             ['Kitchen','Interior — Hollow-core w/ trim','2\'6" x 6\'8"','','','','','','Not Started'],
+             ['Kitchen','Interior — Hollow-core w/ trim','2\'8" x 6\'8"','','','','','','Not Started'],
+             ['Vestibule','Exterior — rear entry, French-style, full-lite — Fiberglass French pair','64" R/O x 6\'8"','','','','','','Not Started'],],
+   windows: [
+['Office','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Office','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Bedroom 1','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Bedroom 1','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Bedroom 1','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Bedroom 2','Vinyl retrofit — remove existing AC unit first','','','','','','','Not Started'],
+      ['Bedroom 2','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Kitchen','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+                                                                                            ['Living Room','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ['Living Room','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
+      ],budget: [
             ['Base Remodel','New cabinets — kitchen + bath','Mid-grade stock/semi-custom','12000','20000','',''],
             ['Base Remodel','New countertops — kitchen + bath','$40–75/sf installed','2400','4500','',''],
             ['Base Remodel','New appliances — range + refrigerator','Mid-grade off-the-shelf','2500','5000','',''],
@@ -510,7 +529,7 @@ Fireplace retiling — optional add, not committed to scope`,
     const id = 'proj_' + Date.now();
     this.state.projects.push({
       id, name, address, sheetId:'', driveFolderId:'', createdAt:new Date().toISOString(),
-      data:{ overview:{sf:'',revision:'',preparedFor:'',notes:''}, scopeSummary:'', assumptions:'', tasks:[] }
+      data:{ overview:{sf:'',revision:'',preparedFor:'',notes:''}, scopeSummary:'', assumptions:'', tasks:[], categories:[], seedTables:{} }
     });
     this.state.activeProjectId = id;
     this.persistProjects();
@@ -520,7 +539,27 @@ Fireplace retiling — optional add, not committed to scope`,
     this.renderTab();
     this.renderTitleBlock();
   },
-  deleteActiveProject(){
+oopenNewCategoryModal(){
+   document.getElementById('ncName').value='';
+         document.getElementById('newCategoryModal').classList.add('show');
+},
+   createCategory(){
+      const name = document.getElementById('ncName').value.trim();
+       if(!name){ alert('Category name required.'); return; }
+      const p = this.getActiveProject();
+      if(!p) return;
+      p.data.categories = p.data.categories || [];
+      const id = 'cat_' + Date.now();
+      p.data.categories.push({id, name});
+      p.data.seedTables = p.data.seedTables || {};
+      p.data.seedTables[id] = [];
+      this.persistProjects();
+      this.closeModal('newCategoryModal');
+      this.state.activeTab = id;
+           this.renderTabNav();
+      this.renderTab();
+   },
+   deleteActiveProject(){
     const p = this.getActiveProject();
     if(!p) return;
     if(!confirm(`Delete "${p.name}"? This removes it from this browser only (Sheets/Drive data in Google is untouched).`)) return;
@@ -554,29 +593,57 @@ Fireplace retiling — optional add, not committed to scope`,
       `<option value="${p.id}" ${p.id===this.state.activeProjectId?'selected':''}>${escapeHtml(p.name)}</option>`
     ).join('');
   },
-  renderTabNav(){
-    const nav = document.getElementById('tabNav');
-    let html = '';
-    let lastGroup = null;
-    TAB_DEFS.forEach(t=>{
-      if(t.group !== lastGroup){
-        html += `<div class="tab-group-label">${t.group === 'IN-APP' ? 'In-App (this browser)' : 'Google Sheets'}</div>`;
-        lastGroup = t.group;
-      }
-      html += `<button class="tab-btn ${this.state.activeTab===t.id?'active':''}" onclick="App.setTab('${t.id}')">
-        <span class="num">${t.num}</span>${t.label}
-      </button>`;
-    });
-    nav.innerHTML = html;
-  },
-  setTab(id){
-    this.state.activeTab = id;
-    this.renderTabNav();
-    this.renderTab();
-  },
-  renderTitleBlock(){
+bubuildTabList(p){
+   const cats = (p && p.data.categories) || [];
+   const list = [
+      {id:'overview', label:'Overview', group:'IN-APP'},
+      {id:'scope', label:'Scope Summary', group:'IN-APP'},
+      ...cats.map(c=>({id:c.id, label:c.name, group:'CATEGORIES'})),
+      {id:'budget', label:'Budget', group:'SHEETS'},
+      {id:'conditions', label:'Site Conditions', group:'SHEETS'},
+      {id:'permits', label:'Permits & Compliance', group:'SHEETS'},
+      {id:'assumptions', label:'Assumptions & Exclusions', group:'IN-APP'},
+      {id:'sprints', label:'Sprints', group:'SHEETS'},
+      {id:'photos', label:'Photos / Files', group:'SHEETS'},
+      {id:'tasks', label:'Next Steps / Tasks', group:'IN-APP'},
+      ];
+   list.forEach((t,i)=>{ t.num = String(i+1).padStart(2,'0'); });
+   return list;
+                },
+   renderTabNav(){
+      const p = this.getActiveProject();
+      const list = this.buildTabList(p);
+      const numOf = id => { const m = list.find(x=>x.id===id); return m ? m.num : ''; };
+      const cats = (p && p.data.categories) || [];
+             const nav = document.getElementById('tabNav');
+      const btn = (id,label) => `<button class="tab-btn ${this.state.activeTab===id?'active':''}" onclick="App.setTab('${id}')"><span class="num">${numOf(id)}</span>${escapeHtml(label)}</button>`;
+      let html = '';
+      html += `<div class="tab-group-label">In-App (this browser)</div>`;
+      html += btn('overview','Overview');
+      html += btn('scope','Scope Summary');
+      html += `<div class="tab-group-label" style="display:flex;justify-content:space-between;align-items:center;padding-right:14px;"><span>Special Orders</span><button class="icon-btn" style="width:20px;height:20px;font-size:13px;padding:0;line-height:1;" title="Add category" onclick="App.openNewCategoryModal()">+</button></div>`;
+      cats.forEach(c=>{ html += btn(c.id, c.name); });
+      html += `<div class="tab-group-label">Google Sheets</div>`;
+   html += btn('budget','Budget');
+      html += btn('conditions','Site Conditions');
+             html += btn('permits','Permits & Compliance');
+      html += `<div class="tab-group-label">In-App (this browser)</div>`;
+             html += btn('assumptions','Assumptions & Exclusions');
+      html += `<div class="tab-group-label">Google Sheets</div>`;
+                html += btn('sprints','Sprints');
+   html += btn('photos','Photos / Files');
+      html += `<div class="tab-group-label">In-App (this browser)</div>`;
+      html += btn('tasks','Next Steps / Tasks');
+      nav.innerHTML = html;
+   },
+   setTab(id){
+      this.state.activeTab = id;
+      this.renderTabNav();
+      this.renderTab();
+   },
+   renderTitleBlock(){
     const p = this.getActiveProject();
-    const tab = TAB_DEFS.find(t=>t.id===this.state.activeTab);
+    const tab = this.buildTabList(p).find(t=>t.id===this.state.activeTab);
     document.getElementById('titleBlock').innerHTML = p ? `
       <div class="tb-item">Project<b>${escapeHtml(p.name)}</b></div>
       <div class="tb-item">Sheet<b>${tab ? tab.num+' — '+tab.label : '—'}</b></div>
@@ -603,20 +670,18 @@ Fireplace retiling — optional add, not committed to scope`,
       case 'scope': body = this.renderScope(p); break;
       case 'assumptions': body = this.renderAssumptions(p); break;
       case 'tasks': body = this.renderTasks(p); break;
-      case 'doors': body = this.renderSheetTable(p,'doors',['#','Room','Type/Location','Material/Spec','Size','Status'],['','','','','',''],'select-status'); break;
-      case 'windows': body = this.renderSheetTable(p,'windows',['#','Room','Material/Spec','Status'],['','','',''],'select-status-3'); break;
       case 'budget': body = this.renderSheetTable(p,'budget',['Section','Item','Basis','Low Est.','High Est.','Actual','Notes'],['','','','','','',''],'none'); break;
       case 'conditions': body = this.renderSheetTable(p,'conditions',['Item','Description','Status','Date Flagged','Notes'],['','','','',''],'select-status-cond'); break;
       case 'permits': body = this.renderSheetTable(p,'permits',['Permit/Requirement','Jurisdiction','Status','Notes'],['','','',''],'select-status-permit'); break;
       case 'sprints': body = this.renderSprints(p); break;
       case 'photos': body = this.renderPhotos(p); break;
-      default: body = '';
+   default: { const cat = (p.data.categories||[]).find(c=>c.id===t); if(cat){ body = this.renderSheetTable(p, cat.id, STANDARD_HEADERS, STANDARD_HEADERS.map(()=>''), 'select-status-standard'); } }
     }
-    const tabDef = TAB_DEFS.find(x=>x.id===t);
+    const tabDef = this.buildTabList(p).find(x=>x.id===t);
     container.innerHTML = `${corners}
       <div class="sheet-header">
         <div class="sheet-title"><span class="idx">${tabDef.num}</span>${tabDef.label}</div>
-        <div class="sheet-meta">${p.name}<br>${tabDef.group === 'SHEETS' ? 'Google Sheet — synced' : 'Local browser storage'}</div>
+        <div class="sheet-meta">${p.name}<br>${(tabDef.group === 'SHEETS' || tabDef.group === 'CATEGORIES') ? 'Google Sheet — synced' : 'Local browser storage'}</div>
       </div>
       ${body}`;
   },
@@ -730,6 +795,7 @@ Fireplace retiling — optional add, not committed to scope`,
     const rows = (p.data.seedTables && p.data.seedTables[key]) ? p.data.seedTables[key] : [];
 
     const statusOptionsMap = {
+       'select-status-standard': ['Not Started','Ordered','Installed','N/A'],
       'select-status': ['Not Started','Ordered','Installed','N/A'],
       'select-status-3': ['Not Started','Ordered','Installed','N/A'],
       'select-status-cond': ['Flagged','GC Reviewed','Resolved'],
