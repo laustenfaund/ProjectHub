@@ -353,9 +353,6 @@ const App = {
     this.loadFromStorage();
      this.migrateLegacyCategories();
      this.migrateLegacyBudget();
-    if(this.state.projects.length === 0){
-      this.seedCassStreet();
-    }
     if(!this.state.activeProjectId && this.state.projects.length){
       this.state.activeProjectId = this.state.projects[0].id;
     }
@@ -405,126 +402,6 @@ const App = {
       });
       this.persistProjects();
    },
-   
-  seedCassStreet(){
-    const id = 'proj_' + Date.now();
-    const project = {
-      id, name:'1058 Cass St', address:'1058 Cass St, Monterey, CA 93940',
-      sheetId:'', driveFolderId:'', createdAt: new Date().toISOString(),
-      data: {
-        overview: {
-          propertyOwner: '',
-          notes:'Full cosmetic remodel. No layout changes, no wall relocations, no structural framing changes, except rear deck (full demo/rebuild). Updated per owner RFI responses: kitchen plumbing/laundry conversion, electrical/lighting, door and window adjustments, exterior finish. (925 SF, Revision 3, prepared for GC bid review.)',
-          siteConditions: `Active ceiling damage near utility/bath hallway — exposed subfloor/joist visible at ceiling line, consistent with past/active leak. Requires inspection before ceiling patching priced.
-Ceiling water staining in multiple locations — rings suggesting repeated wetting near utility room/hallway beam.
-Floor staining at utility room toilet base — possible subfloor issue; recommend inspection before plumbing rough-in scope finalized.
-Wall paneling staining, Bedroom 2 — low on wall, possibly moisture-related.
-Exterior stucco cracking at front entry — cosmetic vs structural significance TBD by GC.`
-        },
-        scopeSummary: `New cabinets and countertops — kitchen and bath (full demo and replace)
-New appliances — range and refrigerator (full demo and replace)
-New flooring throughout (925 SF) — resilient/LVP in living areas and bedrooms, tile in wet areas
-New plumbing fixtures — full demo & replace: 2 toilets, tub/shower combo, 2 sinks, kitchen sink/faucet
-Sheetrock patching throughout (tape, texture, sand ready for paint)
-1/4" sheetrock over existing paneling — approx 2/3 of house wall area
-Frame and sheetrock over 3 existing skylight wells (Living Room, Kitchen, Bedroom 2)
-Demo and full structural rebuild of existing 5'x10' rear deck
-10 retrofit vinyl windows (off-the-shelf) — full-house replacement, incl. removal of 1 through-window AC unit
-12 doors (off-the-shelf) — 2 exterior fiberglass, 1 exterior French-style pair, 9 interior hollow-core; Door #6 removed from scope (infill)
-Kitchen (west corner) — re-plumb for stacked washer/dryer (owner-supplied unit)
-Electrical — demo existing fixtures (except Vestibule/Utility); new recessed can lighting on new dedicated circuit(s); knob-and-tube not disturbed
-Demo existing built-in benches at rear exterior
-Exterior prep and paint — full exterior (stucco/wood siding mix)
-Interior prep and paint — full interior walls & ceilings`,
-        assumptions: `ASSUMPTIONS
-No structural, layout, or load-bearing wall changes, except rear deck (full demo/rebuild).
-Existing window/door openings assumed square/sound enough for retrofit; full-frame replacement not included unless required.
-Utility room toilet plumbing assumed to reuse existing drain/waste line, pending GC inspection.
-Electrical: demo + new recessed can lighting on dedicated circuits; knob-and-tube not tied into or disturbed. No panel upgrade or full rewire.
-All doors/windows stock/off-the-shelf; openings reframed to standard sizes rather than custom order.
-Interior and exterior prep/paint included. Sheetrock patch and paneling-cover areas include tape/texture/sand ready for paint.
-Pricing assumes no discovery of dry rot, water damage, active leaks, or out-of-square framing beyond what's flagged in Site Conditions.
-
-EXCLUSIONS (unless separately scoped)
-HVAC modifications
-Electrical panel upgrade or full rewire
-Roofing
-Exterior stucco repair (pending GC assessment)
-Landscaping / hardscape beyond the 5x10 deck footprint
-Fireplace retiling — optional add, not committed to scope`,
-        tasks: [
-          {id:'t1', text:'Review scope/budget with GC; reconcile against GC line-item bid', done:false},
-          {id:'t2', text:'GC to assess flagged site conditions before final pricing', done:false},
-          {id:'t3', text:'Confirm cabinet, countertop, flooring material selections', done:false},
-          {id:'t4', text:'Decide on fireplace retiling scope (optional add)', done:false},
-          {id:'t5', text:'Submit finalized scope and budget', done:false},
-        ],
-         categories: [ {id:'doors', name:'Doors'}, {id:'windows', name:'Windows'} ],
-        seedTables: {
-          doors: [
-['Living Room','Exterior — front entry — Fiberglass, off-the-shelf','3\'0" x 6\'8"','','','','','','Not Started'],
-   ['Office','Exterior — front entry — Fiberglass, off-the-shelf','2\'4" x 6\'8"','','','','','','Not Started'],
-   ['Office','Interior — to hallway/living rm — Hollow-core w/ trim','2\'4" x 6\'8"','','','','','','Not Started'],
-             ['Utility/Hallway','Interior — Hollow-core w/ trim','2\'0" x 6\'8"','','','','','','Not Started'],
-             ['Bath','Interior — Hollow-core w/ trim','2\'0" x 6\'8"','','','','','','Not Started'],
-             ['Bedroom 1','REMOVED — infill rough opening, match exterior finish — Infill','2\'8" x 6\'8" R.O.','','','','','','Not Started'],
-             ['Bedroom 1','Interior — to Vestibule — Hollow-core w/ trim','2\'4" x 6\'8"','','','','','','Not Started'],
-    ['Utility','Interior — Hollow-core w/ trim','2\'4" x 6\'8"','','','','','','Not Started'],
-             ['Bedroom 2','Interior — to Vestibule — Hollow-core w/ trim','2\'6" x 6\'8"','','','','','','Not Started'],
-             ['Kitchen','Interior — Hollow-core w/ trim','2\'8" x 6\'8"','','','','','','Not Started'],
-             ['Kitchen','Interior — Hollow-core w/ trim','2\'6" x 6\'8"','','','','','','Not Started'],
-             ['Kitchen','Interior — Hollow-core w/ trim','2\'8" x 6\'8"','','','','','','Not Started'],
-             ['Vestibule','Exterior — rear entry, French-style, full-lite — Fiberglass French pair','64" R/O x 6\'8"','','','','','','Not Started'],],
-   windows: [
-['Office','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Office','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Bedroom 1','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Bedroom 1','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Bedroom 1','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Bedroom 2','Vinyl retrofit — remove existing AC unit first','','','','','','','Not Started'],
-      ['Bedroom 2','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Kitchen','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-                                                                                            ['Living Room','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-      ['Living Room','Vinyl retrofit, off-the-shelf','','','','','','','Not Started'],
-            ],budget: [
-               ['Base Remodel','New cabinets — kitchen + bath','Mid-grade stock/semi-custom','20000','',''],
-                  ['Base Remodel','New countertops — kitchen + bath','$40–75/sf installed','4500','',''],
-                  ['Base Remodel','New appliances — range + refrigerator','Mid-grade off-the-shelf','5000','',''],
-                  ['Base Remodel','New flooring — resilient/LVP ~700sf','$6–10/sf installed','7000','',''],
-                  ['Base Remodel','New flooring — tile, Bath+Utility ~100sf','$10–18/sf installed','1800','',''],
-                              ['Base Remodel','New flooring — kitchen ~125sf','$8–14/sf installed','1750','',''],
-                  ['Base Remodel','Plumbing fixtures — full demo & replace','Mid-grade + install','14000','',''],
-                  ['Base Remodel','Kitchen laundry conversion re-plumb','Drain reroute + supply valves','2200','',''],
-                                                                                                         ['Base Remodel','Sheetrock patching, general','Tape/texture/sand ready for paint','4600','',''],
-                  ['Base Remodel','1/4" sheetrock over paneling ~2/3 area','$2.75–4.25/sf','7500','',''],
-                  ['Base Remodel','Frame & sheetrock over 3 skylight wells','$600–1200/well','3600','',''],
-               ['Base Remodel','Demo & rebuild 5x10 rear deck','$30–60/sf + demo','4250','',''],
-                  ['Base Remodel','10 retrofit vinyl windows installed','$500–900/window','9000','',''],
-               ['Base Remodel','Electrical — recessed can lighting + circuits','~10-12 fixtures + new circuits','6500','',''],
-                  ['Base Remodel','Demo exterior built-in benches','Labor + disposal','600','',''],
-               ['Base Remodel','Door #6 infill + exterior finish match','Carpentry + matched siding','1200','',''],
-                  ['Base Remodel','Exterior prep & paint, full exterior','$2.50–4.25/sf ext.','9500','',''],
-                        ['Base Remodel','Interior prep & paint, full interior','$2.25–3.75/sf, ~2775sf','10500','',''],
-                  ['Door Package','Exterior fiberglass doors (#1, #2)','2 @ $1200–2000ea','4000','',''],
-                     ['Door Package','Exterior French-style pair (#13)','1 @ $2800–4500','4500','',''],
-                  ['Door Package','Interior hollow-core doors w/ trim (9)','9 @ $350–550ea','4950','',''],
-                                  ['Permits','Plumbing, MPWMD, deck, electrical circuit permits','—','3600','',''],
-             ],
-          permits: [
-            ['Plumbing fixture replacement permit','City of Monterey','Not Started','MPWMD low-flow compliance documentation required'],
-            ['Deck rebuild permit','City of Monterey','Not Started','Full structural replacement likely triggers permit'],
-            ['Coastal zone / historic district review','City of Monterey Building Services','Not Started','Verify parcel status before finalizing bid'],
-            ['Window/door replacement permit review','City of Monterey','Not Started','Confirm given full-house count (10 windows, 12 doors)'],
-            ['New dedicated electrical circuit permit','City of Monterey','Not Started','Required for new can lighting circuits'],
-          ],
-        }
-      }
-    };
-    this.state.projects.push(project);
-    this.state.activeProjectId = id;
-    this.persistProjects();
-    this.persistActive();
-  },
 
   /* ---------- Project management ---------- */
   getActiveProject(){
@@ -1134,6 +1011,12 @@ const authed = this.state.google.connected;
       setTimeout(()=>this.tryInitGoogle(promptSignIn), 400);
       return;
     }
+    if(this.state.google.tokenClient){
+      // Already initialized on a prior load — request the token synchronously,
+      // right inside this click handler, so browsers don't treat the popup as unsolicited.
+      if(promptSignIn) this.state.google.tokenClient.requestAccessToken();
+      return;
+    }
     gapi.load('client', async () => {
       await gapi.client.init({
         apiKey: this.state.google.apiKey,
@@ -1153,6 +1036,10 @@ const authed = this.state.google.connected;
             this.updateGoogleStatus();
             this.renderTab();
           }
+        },
+        error_callback: (err) => {
+          console.error('Google sign-in error', err);
+          alert('Google sign-in didn\'t complete (' + ((err && err.type) || 'unknown error') + '). If your browser blocked a popup, allow popups for this site and click "Connect / Setup" again — the retry will reuse the sign-in window without needing a new popup.');
         }
       });
       if(promptSignIn){
