@@ -345,7 +345,7 @@ const App = {
     projects: [],
     activeProjectId: null,
     activeTab: 'overview',
-    google: { clientId:'', apiKey:'', connected:false, tokenClient:null, accessToken:null },
+    google: { clientId:'', apiKey:'', connected:false, tokenClient:null, accessToken:null, busy:false },
   },
 
   /* ---------- Boot ---------- */
@@ -595,7 +595,7 @@ buildTabList(p){
     container.innerHTML = `${corners}
       <div class="sheet-header">
         <div class="sheet-title"><span class="idx">${tabDef.num}</span>${tabDef.label}</div>
-        <div class="sheet-meta">${p.name}<br>${metaLabelMap[tabDef.group] || 'Local browser storage'}</div>
+        <div class="sheet-meta">${escapeHtml(p.name)}<br>${metaLabelMap[tabDef.group] || 'Local browser storage'}</div>
       </div>
       ${body}`;
   },
@@ -695,6 +695,8 @@ buildTabList(p){
     const p = this.getActiveProject();
     if(!p) return;
     if(!this.state.google.connected){ this.openGoogleSetup(); return; }
+    if(this.state.google.busy) return;
+    this.state.google.busy = true;
     const titleMap = { overview:'Overview', scope:'Scope Summary', assumptions:'Assumptions & Exclusions' };
     const textMap = {
       overview: () => this.buildOverviewDocText(p),
@@ -707,9 +709,6 @@ buildTabList(p){
       p.driveFolderId = projectFolderId;
       p.data.docSnapshots = p.data.docSnapshots || {};
       const existing = p.data.docSnapshots[kind];
-      if(existing && existing.docId){
-        try{ await gapi.client.drive.files.delete({ fileId: existing.docId }); }catch(e){ /* already removed upstream */ }
-      }
       const title = `${p.name} — ${titleMap[kind]}`;
       const text = textMap[kind]();
       const metadata = { name: title, mimeType:'application/vnd.google-apps.document', parents:[projectFolderId] };
@@ -728,6 +727,11 @@ buildTabList(p){
       });
       if(!res.ok) throw new Error('Drive upload failed: ' + res.status);
       const result = await res.json();
+      // Only drop the old snapshot once the new one is confirmed created, so a failed
+      // regeneration never leaves the user with zero valid Doc link.
+      if(existing && existing.docId){
+        try{ await gapi.client.drive.files.delete({ fileId: existing.docId }); }catch(e){ /* already removed upstream */ }
+      }
       p.data.docSnapshots[kind] = {
         docId: result.id,
         url: result.webViewLink || `https://docs.google.com/document/d/${result.id}/edit`,
@@ -739,6 +743,7 @@ buildTabList(p){
       console.error('Docx generation failed', err);
       alert('Could not generate the Doc. Check the browser console for details.');
     }
+    finally{ this.state.google.busy = false; }
   },
 
   renderTasks(p){
@@ -961,6 +966,8 @@ const authed = this.state.google.connected;
   async setupPhotoFolders(){
     const p = this.getActiveProject();
     if(!p || !this.state.google.connected) return;
+    if(this.state.google.busy) return;
+    this.state.google.busy = true;
     try{
       const ongoingId = await this.findOrCreateFolder('Ongoing Projects', null);
       const projectFolderId = await this.findOrCreateFolder(p.name, ongoingId);
@@ -979,6 +986,7 @@ const authed = this.state.google.connected;
       console.error('Drive folder setup failed', err);
       alert('Could not set up Drive folders. Check the browser console for details.');
     }
+    finally{ this.state.google.busy = false; }
   },
 
   /* ---------- GOOGLE INTEGRATION ---------- */
@@ -1093,20 +1101,49 @@ async findOrCreateFolder(name, parentId){
      async createProjectSheet(p){
      if(!p) return;
      if(!this.state.google.connected){ this.openGoogleSetup(); return; }
+     if(this.state.google.busy) return;
+     this.state.google.busy = true;
        const nameMap = this.buildTabNameMap(p);
           const headersMap = this.buildTabHeadersMap(p);
-          const sheetsReq = Object.keys(nameMap).map(key => ({ properties: { title: nameMap[key] } }));
      try{
           const ongoingId = await this.findOrCreateFolder('Ongoing Projects', null);
      const projectFolderId = await this.findOrCreateFolder(p.name, ongoingId);
-     const res = await gapi.client.sheets.spreadsheets.create({
+
+     let existingTitles = [];
+     if(p.sheetId){
+          try{
+               const meta = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: p.sheetId, fields: 'sheets.properties.title' });
+               existingTitles = (meta.result.sheets || []).map(s => s.properties.title);
+          }catch(e){
+               // Sheet no longer exists or isn't reachable — fall back to creating a new one.
+               p.sheetId = '';
+          }
+     }
+
+     if(!p.sheetId){
+          const sheetsReq = Object.keys(nameMap).map(key => ({ properties: { title: nameMap[key] } }));
+          const res = await gapi.client.sheets.spreadsheets.create({
      properties: { title: `${p.name} — Project Manager Sync` },
      sheets: sheetsReq
            });
      p.sheetId = res.result.spreadsheetId;
           await gapi.client.drive.files.update({ fileId: p.sheetId, addParents: projectFolderId, removeParents: 'root', fields: 'id,parents' });
           this.persistProjects();
+          existingTitles = [];
+     } else {
+          // Sheet already exists (e.g. a category or tab was added after the first sync) —
+          // add only the tabs that are missing instead of spawning a second spreadsheet.
+          const missingKeys = Object.keys(nameMap).filter(key => !existingTitles.includes(nameMap[key]));
+          if(missingKeys.length){
+               await gapi.client.sheets.spreadsheets.batchUpdate({
+                    spreadsheetId: p.sheetId,
+                    resource: { requests: missingKeys.map(key => ({ addSheet: { properties: { title: nameMap[key] } } })) }
+               });
+          }
+     }
+
           for(const key of Object.keys(nameMap)){
+               if(existingTitles.includes(nameMap[key])) continue; // leave tabs that already had data alone
                const headers = headersMap[key];
                const rows = (p.data.seedTables && p.data.seedTables[key]) ? p.data.seedTables[key] : [];
                await gapi.client.sheets.spreadsheets.values.update({
@@ -1117,7 +1154,8 @@ async findOrCreateFolder(name, parentId){
                });
      }
           this.renderTab();
-     }catch(err){ console.error('Create sheet failed', err); alert('Could not create the Google Sheet. Check the browser console for details.'); }
+     }catch(err){ console.error('Create sheet failed', err); alert('Could not create/update the Google Sheet. Check the browser console for details.'); }
+     finally{ this.state.google.busy = false; }
      },
      connectOrCreateSheet(){
      const p = this.getActiveProject();
@@ -1129,16 +1167,30 @@ async findOrCreateFolder(name, parentId){
           const tabNameMap = this.buildTabNameMap(p);
           const sheetName = tabNameMap[tabKey];
           if(!sheetName) return;
-          const range = `${sheetName}!A2`;
-          const values = p.data.seedTables[tabKey];
+          const values = p.data.seedTables[tabKey] || [];
           try{
-               await gapi.client.sheets.spreadsheets.values.update({
-           spreadsheetId: p.sheetId,
-     range,
-     valueInputOption: 'RAW',
-     resource: { values }
-     });
-     }catch(err){ console.error('Sheets sync failed', err); }
+               // Clear the existing rows first so a deleted local row doesn't leave a stale
+               // duplicate behind in the Sheet — values.update alone only overwrites, never shrinks.
+               await gapi.client.sheets.spreadsheets.values.clear({
+                    spreadsheetId: p.sheetId,
+                    range: `${sheetName}!A2:Z10000`,
+               });
+               if(values.length){
+                    await gapi.client.sheets.spreadsheets.values.update({
+                         spreadsheetId: p.sheetId,
+                         range: `${sheetName}!A2`,
+                         valueInputOption: 'RAW',
+                         resource: { values }
+                    });
+               }
+     }catch(err){
+          console.error('Sheets sync failed', err);
+          if(err && (err.status === 401 || (err.result && err.result.error && err.result.error.code === 401))){
+               // Access token expired — reflect that in the sidebar so it's not a silent failure.
+               this.state.google.connected = false;
+               this.updateGoogleStatus();
+          }
+     }
      },
      
        };
