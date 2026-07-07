@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -204,6 +205,9 @@ table.data-table td input:focus,table.data-table td select:focus{background:var(
 .sprint-entry .week{font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
 .sprint-entry .content{white-space:pre-wrap;font-size:13px;line-height:1.5;}
 
+.doc-status{font-family:var(--font-mono);font-size:11px;color:var(--ink-dim);margin-top:10px;}
+.doc-status a{color:var(--accent);}
+
 .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:16px;}
 .photo-card{border:1px solid var(--line-strong);border-radius:2px;overflow:hidden;background:var(--bp-field-deep);}
 .photo-card img{width:100%;height:110px;object-fit:cover;display:block;background:#0b1926;}
@@ -409,8 +413,13 @@ const App = {
       sheetId:'', driveFolderId:'', createdAt: new Date().toISOString(),
       data: {
         overview: {
-          sf:'925', revision:'Revision 3', preparedFor:'GC bid review',
-          notes:'Full cosmetic remodel. No layout changes, no wall relocations, no structural framing changes, except rear deck (full demo/rebuild). Updated per owner RFI responses: kitchen plumbing/laundry conversion, electrical/lighting, door and window adjustments, exterior finish.'
+          propertyOwner: '',
+          notes:'Full cosmetic remodel. No layout changes, no wall relocations, no structural framing changes, except rear deck (full demo/rebuild). Updated per owner RFI responses: kitchen plumbing/laundry conversion, electrical/lighting, door and window adjustments, exterior finish. (925 SF, Revision 3, prepared for GC bid review.)',
+          siteConditions: `Active ceiling damage near utility/bath hallway — exposed subfloor/joist visible at ceiling line, consistent with past/active leak. Requires inspection before ceiling patching priced.
+Ceiling water staining in multiple locations — rings suggesting repeated wetting near utility room/hallway beam.
+Floor staining at utility room toilet base — possible subfloor issue; recommend inspection before plumbing rough-in scope finalized.
+Wall paneling staining, Bedroom 2 — low on wall, possibly moisture-related.
+Exterior stucco cracking at front entry — cosmetic vs structural significance TBD by GC.`
         },
         scopeSummary: `New cabinets and countertops — kitchen and bath (full demo and replace)
 New appliances — range and refrigerator (full demo and replace)
@@ -501,13 +510,6 @@ Fireplace retiling — optional add, not committed to scope`,
                   ['Door Package','Interior hollow-core doors w/ trim (9)','9 @ $350–550ea','4950','',''],
                                   ['Permits','Plumbing, MPWMD, deck, electrical circuit permits','—','3600','',''],
              ],
-   conditions: [
-            ['Active ceiling damage near utility/bath hallway','Exposed subfloor/joist visible at ceiling line, consistent with past/active leak','Flagged',today(),'Requires inspection before ceiling patching priced'],
-            ['Ceiling water staining, multiple locations','Rings suggesting repeated wetting near utility room/hallway beam','Flagged',today(),''],
-            ['Floor staining at utility room toilet base','Possible subfloor issue; recommend inspection before plumbing rough-in scope finalized','Flagged',today(),''],
-            ['Wall paneling staining, Bedroom 2','Low on wall, possibly moisture-related','Flagged',today(),''],
-            ['Exterior stucco cracking at front entry','Cosmetic vs structural significance TBD by GC','Flagged',today(),''],
-          ],
           permits: [
             ['Plumbing fixture replacement permit','City of Monterey','Not Started','MPWMD low-flow compliance documentation required'],
             ['Deck rebuild permit','City of Monterey','Not Started','Full structural replacement likely triggers permit'],
@@ -531,8 +533,7 @@ Fireplace retiling — optional add, not committed to scope`,
   switchProject(id){
     this.state.activeProjectId = id;
     this.persistActive();
-    this.renderTab();
-    this.renderTitleBlock();
+    this.refreshCurrentView();
   },
   openNewProjectModal(){
     document.getElementById('npName').value='';
@@ -546,16 +547,14 @@ Fireplace retiling — optional add, not committed to scope`,
     if(!name){ alert('Project name required.'); return; }
     const id = 'proj_' + Date.now();
     this.state.projects.push({
-      id, name, address, sheetId:'', driveFolderId:'', createdAt:new Date().toISOString(),
-      data:{ overview:{sf:'',revision:'',preparedFor:'',notes:''}, scopeSummary:'', assumptions:'', tasks:[], categories:[], seedTables:{} }
+      id, name, address, sheetId:'', driveFolderId:'', driveSubfolders:null, createdAt:new Date().toISOString(),
+      data:{ overview:{propertyOwner:'',notes:'',siteConditions:''}, scopeSummary:'', assumptions:'', tasks:[], categories:[], seedTables:{}, sequence:[], docSnapshots:{} }
     });
     this.state.activeProjectId = id;
     this.persistProjects();
     this.persistActive();
     this.closeModal('newProjectModal');
-    this.renderSidebar();
-    this.renderTab();
-    this.renderTitleBlock();
+    this.refreshCurrentView();
   },
 openNewCategoryModal(){
    document.getElementById('ncName').value='';
@@ -574,8 +573,7 @@ openNewCategoryModal(){
       this.persistProjects();
       this.closeModal('newCategoryModal');
       this.state.activeTab = id;
-           this.renderTabNav();
-      this.renderTab();
+      this.refreshCurrentView();
    },
    deleteActiveProject(){
     const p = this.getActiveProject();
@@ -585,9 +583,7 @@ openNewCategoryModal(){
     this.state.activeProjectId = this.state.projects.length ? this.state.projects[0].id : null;
     this.persistProjects();
     this.persistActive();
-    this.renderSidebar();
-    this.renderTab();
-    this.renderTitleBlock();
+    this.refreshCurrentView();
   },
 
   saveActiveProjectData(patch){
@@ -614,16 +610,19 @@ openNewCategoryModal(){
 buildTabList(p){
    const cats = (p && p.data.categories) || [];
    const list = [
-      {id:'overview', label:'Overview', group:'IN-APP'},
-      {id:'scope', label:'Scope Summary', group:'IN-APP'},
-      ...cats.map(c=>({id:c.id, label:c.name, group:'CATEGORIES'})),
+      {id:'overview', label:'Overview', group:'DOCX'},
+      {id:'scope', label:'Scope Summary', group:'DOCX'},
+      {id:'sow', label:'Detailed SOW', group:'SHEETS'},
+      {id:'assumptions', label:'Assumptions & Exclusions', group:'DOCX'},
+      {id:'openItems', label:'Open Items', group:'SHEETS'},
       {id:'budget', label:'Budget', group:'SHEETS'},
-      {id:'conditions', label:'Site Conditions', group:'SHEETS'},
       {id:'permits', label:'Permits & Compliance', group:'SHEETS'},
-      {id:'assumptions', label:'Assumptions & Exclusions', group:'IN-APP'},
-      {id:'sprints', label:'Sprints', group:'SHEETS'},
-      {id:'photos', label:'Photos / Files', group:'SHEETS'},
-      {id:'tasks', label:'Next Steps / Tasks', group:'IN-APP'},
+      {id:'sequence', label:'Project Sequence', group:'SHEETS'},
+      {id:'tasks', label:'Next Steps / Tasks', group:'LOCAL'},
+      ...cats.map(c=>({id:c.id, label:c.name, group:'CATEGORIES'})),
+      {id:'changeOrders', label:'Change Orders', group:'SHEETS'},
+      {id:'subcontractors', label:'Subcontractors', group:'SHEETS'},
+      {id:'photos', label:'Photos / Files', group:'DRIVE'},
       ];
    list.forEach((t,i)=>{ t.num = String(i+1).padStart(2,'0'); });
    return list;
@@ -636,28 +635,38 @@ buildTabList(p){
              const nav = document.getElementById('tabNav');
       const btn = (id,label) => `<button class="tab-btn ${this.state.activeTab===id?'active':''}" onclick="App.setTab('${id}')"><span class="num">${numOf(id)}</span>${escapeHtml(label)}</button>`;
       let html = '';
-      html += `<div class="tab-group-label">In-App (this browser)</div>`;
+      html += `<div class="tab-group-label">Docs — Static Export</div>`;
       html += btn('overview','Overview');
       html += btn('scope','Scope Summary');
+      html += `<div class="tab-group-label">Google Sheets</div>`;
+      html += btn('sow','Detailed SOW');
+      html += `<div class="tab-group-label">Docs — Static Export</div>`;
+      html += btn('assumptions','Assumptions & Exclusions');
+      html += `<div class="tab-group-label">Google Sheets</div>`;
+      html += btn('openItems','Open Items');
+      html += btn('budget','Budget');
+      html += btn('permits','Permits & Compliance');
+      html += btn('sequence','Project Sequence');
+      html += `<div class="tab-group-label">Local Only</div>`;
+      html += btn('tasks','Next Steps / Tasks');
       html += `<div class="tab-group-label" style="display:flex;justify-content:space-between;align-items:center;padding-right:14px;"><span>Special Orders</span><button class="icon-btn" style="width:20px;height:20px;font-size:13px;padding:0;line-height:1;" title="Add category" onclick="App.openNewCategoryModal()">+</button></div>`;
       cats.forEach(c=>{ html += btn(c.id, c.name); });
       html += `<div class="tab-group-label">Google Sheets</div>`;
-   html += btn('budget','Budget');
-      html += btn('conditions','Site Conditions');
-             html += btn('permits','Permits & Compliance');
-      html += `<div class="tab-group-label">In-App (this browser)</div>`;
-             html += btn('assumptions','Assumptions & Exclusions');
-      html += `<div class="tab-group-label">Google Sheets</div>`;
-                html += btn('sprints','Sprints');
-   html += btn('photos','Photos / Files');
-      html += `<div class="tab-group-label">In-App (this browser)</div>`;
-      html += btn('tasks','Next Steps / Tasks');
+      html += btn('changeOrders','Change Orders');
+      html += btn('subcontractors','Subcontractors');
+      html += `<div class="tab-group-label">Google Drive</div>`;
+      html += btn('photos','Photos / Files');
       nav.innerHTML = html;
    },
    setTab(id){
       this.state.activeTab = id;
+      this.refreshCurrentView();
+   },
+   refreshCurrentView(){
+      this.renderSidebar();
       this.renderTabNav();
       this.renderTab();
+      this.renderTitleBlock();
    },
    renderTitleBlock(){
     const p = this.getActiveProject();
@@ -686,58 +695,91 @@ buildTabList(p){
     switch(t){
       case 'overview': body = this.renderOverview(p); break;
       case 'scope': body = this.renderScope(p); break;
+      case 'sow': body = this.renderSheetTable(p,'sow',['Room/Area','Demo Notes','New Construction Notes','Special Notes'],['','','',''],'none'); break;
       case 'assumptions': body = this.renderAssumptions(p); break;
-      case 'tasks': body = this.renderTasks(p); break;
+      case 'openItems': body = this.renderSheetTable(p,'openItems',['Item','Description','Raised By','Date','Status','Resolution'],['','','','','',''],'none'); break;
             case 'budget': body = this.renderBudgetDashboard(p); break;
-      case 'conditions': body = this.renderSheetTable(p,'conditions',['Item','Description','Status','Date Flagged','Notes'],['','','','',''],'select-status-cond'); break;
       case 'permits': body = this.renderSheetTable(p,'permits',['Permit/Requirement','Jurisdiction','Status','Notes'],['','','',''],'select-status-permit'); break;
-      case 'sprints': body = this.renderSprints(p); break;
+      case 'sequence': body = this.renderSequence(p); break;
+      case 'tasks': body = this.renderTasks(p); break;
+      case 'changeOrders': body = this.renderSheetTable(p,'changeOrders',['CO Number','Date','Originating Scope/Reason','Description of Change','Cost Impact','Schedule Impact','Approval/Sign-off'],['','','','','','',''],'none'); break;
+      case 'subcontractors': body = this.renderSheetTable(p,'subcontractors',['Contact Name','Company Name','Trade','Phone Number','Email','Flags','Notes'],['','','','','','',''],'none'); break;
       case 'photos': body = this.renderPhotos(p); break;
    default: { const cat = (p.data.categories||[]).find(c=>c.id===t); if(cat){ body = this.renderSheetTable(p, cat.id, STANDARD_HEADERS, STANDARD_HEADERS.map(()=>''), 'select-status-standard'); } }
     }
     const tabDef = this.buildTabList(p).find(x=>x.id===t);
+    const metaLabelMap = {
+      DOCX: 'Local browser storage — static Docx export on demand',
+      SHEETS: 'Google Sheet — synced',
+      CATEGORIES: 'Google Sheet — synced',
+      LOCAL: 'Local browser storage — never synced',
+      DRIVE: 'Google Drive — folder linked',
+    };
     container.innerHTML = `${corners}
       <div class="sheet-header">
         <div class="sheet-title"><span class="idx">${tabDef.num}</span>${tabDef.label}</div>
-        <div class="sheet-meta">${p.name}<br>${(tabDef.group === 'SHEETS' || tabDef.group === 'CATEGORIES') ? 'Google Sheet — synced' : 'Local browser storage'}</div>
+        <div class="sheet-meta">${p.name}<br>${metaLabelMap[tabDef.group] || 'Local browser storage'}</div>
       </div>
       ${body}`;
   },
 
-  /* ---------- IN-APP TABS ---------- */
+  /* ---------- IN-APP TABS (static Docx export) ---------- */
+  renderDocxStatus(p, kind){
+    const snap = p.data.docSnapshots && p.data.docSnapshots[kind];
+    if(!snap) return `<div class="doc-status">No Docx generated yet. Generating writes a one-way snapshot to this project's Drive folder — edits inside the Doc do not sync back here.</div>`;
+    return `<div class="doc-status">Last generated ${new Date(snap.generatedAt).toLocaleString()} — <a href="${snap.url}" target="_blank" rel="noopener">Open Doc</a>. Regenerating overwrites this snapshot; it does not read edits back from the Doc.</div>`;
+  },
   renderOverview(p){
     const d = p.data.overview || {};
     return `
       <div class="grid-2">
         <div class="field-group">
-          <label class="field-label">Square Footage</label>
-          <input class="field-input" id="ov_sf" value="${escapeAttr(d.sf)}">
+          <label class="field-label">Property Owner</label>
+          <input class="field-input" id="ov_owner" value="${escapeAttr(d.propertyOwner)}">
         </div>
         <div class="field-group">
-          <label class="field-label">Revision</label>
-          <input class="field-input" id="ov_rev" value="${escapeAttr(d.revision)}">
+          <label class="field-label">Project Address</label>
+          <input class="field-input" id="ov_address" value="${escapeAttr(p.address)}">
         </div>
-      </div>
-      <div class="field-group">
-        <label class="field-label">Prepared For</label>
-        <input class="field-input" id="ov_pf" value="${escapeAttr(d.preparedFor)}">
       </div>
       <div class="field-group">
         <label class="field-label">Overview Notes</label>
-        <textarea class="freeform" id="ov_notes" style="min-height:180px;">${escapeHtml(d.notes)}</textarea>
+        <textarea class="freeform" id="ov_notes" style="min-height:160px;">${escapeHtml(d.notes)}</textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Existing Site Conditions</label>
+        <textarea class="freeform" id="ov_conditions" style="min-height:160px;" placeholder="Narrative description of existing site conditions...">${escapeHtml(d.siteConditions)}</textarea>
       </div>
       <div class="save-row">
         <button class="btn" onclick="App.saveOverview()">Save</button>
+        <button class="btn secondary" onclick="App.generateDocx('overview')">Generate Docx</button>
         <button class="btn danger" onclick="App.deleteActiveProject()">Delete Project</button>
-      </div>`;
+      </div>
+      ${this.renderDocxStatus(p,'overview')}`;
   },
   saveOverview(){
+    const p = this.getActiveProject();
+    if(!p) return;
+    p.address = document.getElementById('ov_address').value;
     this.saveActiveProjectData({ overview:{
-      sf: document.getElementById('ov_sf').value,
-      revision: document.getElementById('ov_rev').value,
-      preparedFor: document.getElementById('ov_pf').value,
+      propertyOwner: document.getElementById('ov_owner').value,
       notes: document.getElementById('ov_notes').value,
+      siteConditions: document.getElementById('ov_conditions').value,
     }});
+    this.renderTitleBlock();
+  },
+  buildOverviewDocText(p){
+    const d = p.data.overview || {};
+    return [
+      `PROPERTY OWNER: ${d.propertyOwner || '—'}`,
+      `PROJECT ADDRESS: ${p.address || '—'}`,
+      '',
+      'OVERVIEW NOTES',
+      d.notes || '—',
+      '',
+      'EXISTING SITE CONDITIONS',
+      d.siteConditions || '—',
+    ].join('\n');
   },
 
   renderScope(p){
@@ -746,7 +788,11 @@ buildTabList(p){
         <label class="field-label">Scope Summary (free text — one item per line)</label>
         <textarea class="freeform" id="scope_text" style="min-height:400px;">${escapeHtml(p.data.scopeSummary)}</textarea>
       </div>
-      <div class="save-row"><button class="btn" onclick="App.saveScope()">Save</button></div>`;
+      <div class="save-row">
+        <button class="btn" onclick="App.saveScope()">Save</button>
+        <button class="btn secondary" onclick="App.generateDocx('scope')">Generate Docx</button>
+      </div>
+      ${this.renderDocxStatus(p,'scope')}`;
   },
   saveScope(){
     this.saveActiveProjectData({ scopeSummary: document.getElementById('scope_text').value });
@@ -758,10 +804,64 @@ buildTabList(p){
         <label class="field-label">Assumptions & Exclusions</label>
         <textarea class="freeform" id="assum_text" style="min-height:400px;">${escapeHtml(p.data.assumptions)}</textarea>
       </div>
-      <div class="save-row"><button class="btn" onclick="App.saveAssumptions()">Save</button></div>`;
+      <div class="save-row">
+        <button class="btn" onclick="App.saveAssumptions()">Save</button>
+        <button class="btn secondary" onclick="App.generateDocx('assumptions')">Generate Docx</button>
+      </div>
+      ${this.renderDocxStatus(p,'assumptions')}`;
   },
   saveAssumptions(){
     this.saveActiveProjectData({ assumptions: document.getElementById('assum_text').value });
+  },
+
+  async generateDocx(kind){
+    const p = this.getActiveProject();
+    if(!p) return;
+    if(!this.state.google.connected){ this.openGoogleSetup(); return; }
+    const titleMap = { overview:'Overview', scope:'Scope Summary', assumptions:'Assumptions & Exclusions' };
+    const textMap = {
+      overview: () => this.buildOverviewDocText(p),
+      scope: () => p.data.scopeSummary || '',
+      assumptions: () => p.data.assumptions || '',
+    };
+    try{
+      const ongoingId = await this.findOrCreateFolder('Ongoing Projects', null);
+      const projectFolderId = await this.findOrCreateFolder(p.name, ongoingId);
+      p.driveFolderId = projectFolderId;
+      p.data.docSnapshots = p.data.docSnapshots || {};
+      const existing = p.data.docSnapshots[kind];
+      if(existing && existing.docId){
+        try{ await gapi.client.drive.files.delete({ fileId: existing.docId }); }catch(e){ /* already removed upstream */ }
+      }
+      const title = `${p.name} — ${titleMap[kind]}`;
+      const text = textMap[kind]();
+      const metadata = { name: title, mimeType:'application/vnd.google-apps.document', parents:[projectFolderId] };
+      const boundary = 'proj_mgr_boundary_' + Date.now();
+      const body =
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+        `--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${text}\r\n` +
+        `--${boundary}--`;
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.state.google.accessToken}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`
+        },
+        body
+      });
+      if(!res.ok) throw new Error('Drive upload failed: ' + res.status);
+      const result = await res.json();
+      p.data.docSnapshots[kind] = {
+        docId: result.id,
+        url: result.webViewLink || `https://docs.google.com/document/d/${result.id}/edit`,
+        generatedAt: new Date().toISOString()
+      };
+      this.persistProjects();
+      this.renderTab();
+    }catch(err){
+      console.error('Docx generation failed', err);
+      alert('Could not generate the Doc. Check the browser console for details.');
+    }
   },
 
   renderTasks(p){
@@ -852,7 +952,6 @@ const authed = this.state.google.connected;
        'select-status-standard': ['Not Started','Ordered','Installed','N/A'],
       'select-status': ['Not Started','Ordered','Installed','N/A'],
       'select-status-3': ['Not Started','Ordered','Installed','N/A'],
-      'select-status-cond': ['Flagged','GC Reviewed','Resolved'],
       'select-status-permit': ['Not Started','Submitted','Approved'],
     };
 
@@ -910,57 +1009,99 @@ const authed = this.state.google.connected;
     if(this.state.google.connected && p.sheetId) this.pushTableToSheet(p, key);
   },
 
-  renderSprints(p){
-    const sprints = p.data.sprints || [];
-    const list = sprints.slice().reverse().map(s => `
+  renderSequence(p){
+    const entries = p.data.sequence || [];
+    const list = entries.slice().reverse().map(s => `
       <div class="sprint-entry">
-        <div class="week">Week of ${escapeHtml(s.week)} — logged ${escapeHtml(s.logged)}</div>
-        <div class="content">${escapeHtml(s.content)}</div>
-      </div>`).join('') || `<div style="color:var(--ink-dim);">No sprints logged yet.</div>`;
+        <div class="week" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Week of ${escapeHtml(s.week)} — logged ${escapeHtml(s.logged)}</span>
+          <label style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;color:var(--ink-dim);">
+            <input type="checkbox" ${s.done?'checked':''} onchange="App.toggleSequenceDone('${s.id}')">Complete
+          </label>
+        </div>
+        <div class="content" style="${s.done?'text-decoration:line-through;color:var(--ink-dim);':''}">${escapeHtml(s.content)}</div>
+      </div>`).join('') || `<div style="color:var(--ink-dim);">No sequence entries logged yet.</div>`;
     return `
       <div class="field-group">
         <label class="field-label">Week Of</label>
-        <input class="field-input" id="sprint_week" placeholder="e.g. Jul 7 – Jul 13">
+        <input class="field-input" id="seq_week" placeholder="e.g. Jul 7 – Jul 13">
       </div>
       <div class="field-group">
-        <label class="field-label">Paste Current Sprint Content</label>
-        <textarea class="freeform" id="sprint_content" style="min-height:160px;" placeholder="Paste sprint info here..."></textarea>
+        <label class="field-label">Paste Current Sequence Content</label>
+        <textarea class="freeform" id="seq_content" style="min-height:160px;" placeholder="Paste sequence info here..."></textarea>
       </div>
-      <div class="save-row"><button class="btn" onclick="App.addSprint()">Log Sprint</button></div>
+      <div class="save-row"><button class="btn" onclick="App.addSequenceEntry()">Log Entry</button></div>
       <div style="margin-top:26px;border-top:1px solid var(--line);padding-top:18px;">
         <label class="field-label">History</label>
         ${list}
       </div>`;
   },
-  addSprint(){
-    const week = document.getElementById('sprint_week').value.trim();
-    const content = document.getElementById('sprint_content').value.trim();
+  addSequenceEntry(){
+    const week = document.getElementById('seq_week').value.trim();
+    const content = document.getElementById('seq_content').value.trim();
     if(!week || !content) return;
     const p = this.getActiveProject();
-    p.data.sprints = p.data.sprints || [];
-    p.data.sprints.push({week, content, logged: today()});
+    p.data.sequence = p.data.sequence || [];
+    p.data.sequence.push({id:'seq'+Date.now(), week, content, done:false, logged: today()});
     this.persistProjects();
     this.renderTab();
   },
+  toggleSequenceDone(id){
+    const p = this.getActiveProject();
+    const s = (p.data.sequence||[]).find(x=>x.id===id);
+    if(s){ s.done = !s.done; this.persistProjects(); this.renderTab(); }
+  },
 
   renderPhotos(p){
-    const connected = this.state.google.connected && p.driveFolderId;
-    const banner = !connected ? `<div class="conn-banner">
-      <b>Not connected to Drive.</b> Connect Google to upload and preview photos/files for this project.
-      <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.openGoogleSetup()">Connect Google</button></div>
-    </div>` : `<div class="field-group">
-      <input type="file" id="photoUpload" multiple onchange="App.handlePhotoUpload(event)">
-    </div>`;
-    const files = p.data.files || [];
-    const cards = files.map(f => `
-      <div class="photo-card">
-        <img src="${f.thumbUrl || ''}" onerror="this.style.display='none'">
-        <div class="meta"><div class="fn">${escapeHtml(f.name)}</div>Linked: ${escapeHtml(f.linkedTab||'General')}<br>${escapeHtml(f.date)}</div>
-      </div>`).join('');
-    return `${banner}<div class="photo-grid">${cards || '<div style="color:var(--ink-dim);">No files yet.</div>'}</div>`;
+    const authed = this.state.google.connected;
+    const sub = p.driveSubfolders || {};
+    const hasFolders = !!(sub.photos && sub.floorPlans && sub.blueprints);
+    let banner = '';
+    if(!authed){
+      banner = `<div class="conn-banner">
+        <b>Not connected to Drive.</b> Connect Google to set up and browse this project's Drive folders.
+        <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.openGoogleSetup()">Connect Google</button></div>
+      </div>`;
+    } else if(!hasFolders){
+      banner = `<div class="conn-banner">
+        <b>Drive folders not set up yet.</b> Create the Photos, Floor Plans, and Blueprints subfolders for this project.
+        <div style="margin-top:8px;"><button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.setupPhotoFolders()">Create Drive Folders</button></div>
+      </div>`;
+    }
+    const folderCard = (label, url) => `
+      <div class="photo-card" style="padding:16px;">
+        <div class="fn" style="margin-bottom:12px;font-size:14px;">${escapeHtml(label)}</div>
+        <a class="btn secondary" style="display:inline-block;text-decoration:none;" href="${url}" target="_blank" rel="noopener">Open in Drive</a>
+      </div>`;
+    const cards = hasFolders ? `
+      <div class="photo-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));">
+        ${folderCard('Photos', sub.photosUrl)}
+        ${folderCard('Floor Plans', sub.floorPlansUrl)}
+        ${folderCard('Blueprints', sub.blueprintsUrl)}
+      </div>` : '';
+    return `${banner}${cards}`;
   },
-  handlePhotoUpload(e){
-    alert('Upload wired to Drive API — requires an active Google connection with Drive scope granted. See setup notes.');
+  async setupPhotoFolders(){
+    const p = this.getActiveProject();
+    if(!p || !this.state.google.connected) return;
+    try{
+      const ongoingId = await this.findOrCreateFolder('Ongoing Projects', null);
+      const projectFolderId = await this.findOrCreateFolder(p.name, ongoingId);
+      p.driveFolderId = projectFolderId;
+      const photosId = await this.findOrCreateFolder('Photos', projectFolderId);
+      const floorPlansId = await this.findOrCreateFolder('Floor Plans', projectFolderId);
+      const blueprintsId = await this.findOrCreateFolder('Blueprints', projectFolderId);
+      p.driveSubfolders = {
+        photos: photosId, photosUrl: `https://drive.google.com/drive/folders/${photosId}`,
+        floorPlans: floorPlansId, floorPlansUrl: `https://drive.google.com/drive/folders/${floorPlansId}`,
+        blueprints: blueprintsId, blueprintsUrl: `https://drive.google.com/drive/folders/${blueprintsId}`,
+      };
+      this.persistProjects();
+      this.renderTab();
+    }catch(err){
+      console.error('Drive folder setup failed', err);
+      alert('Could not set up Drive folders. Check the browser console for details.');
+    }
   },
 
   /* ---------- GOOGLE INTEGRATION ---------- */
@@ -1034,15 +1175,18 @@ const authed = this.state.google.connected;
 
   /* ---------- Google Sheet creation & sync ---------- */
        buildTabNameMap(p){
-         const map = { budget:'Budget', conditions:'Site Conditions', permits:'Permits & Compliance' };
+         const map = { sow:'Detailed SOW', openItems:'Open Items', budget:'Budget', permits:'Permits & Compliance', changeOrders:'Change Orders', subcontractors:'Subcontractors' };
              (p.data.categories||[]).forEach(c => { map[c.id] = c.name; });
                 return map;
        },
      buildTabHeadersMap(p){
      const map = {
+          sow: ['Room/Area','Demo Notes','New Construction Notes','Special Notes'],
+          openItems: ['Item','Description','Raised By','Date','Status','Resolution'],
                                                     budget: ['Section','Item','Basis','Projected Cost','Actual Cost','Notes'],
-     conditions: ['Item','Description','Status','Date Flagged','Notes'],
           permits: ['Permit/Requirement','Jurisdiction','Status','Notes'],
+          changeOrders: ['CO Number','Date','Originating Scope/Reason','Description of Change','Cost Impact','Schedule Impact','Approval/Sign-off'],
+          subcontractors: ['Contact Name','Company Name','Trade','Phone Number','Email','Flags','Notes'],
      };
           (p.data.categories||[]).forEach(c => { map[c.id] = STANDARD_HEADERS; });
           return map;
