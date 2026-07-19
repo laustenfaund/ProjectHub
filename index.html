@@ -960,6 +960,10 @@ const authed = this.state.google.connected;
         ${folderCard('Photos', sub.photosUrl)}
         ${folderCard('Floor Plans', sub.floorPlansUrl)}
         ${folderCard('Blueprints', sub.blueprintsUrl)}
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn-mini" style="width:auto;padding:7px 14px;" onclick="App.setupPhotoFolders()">Recreate Folders</button>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-dim);margin-left:10px;">If these links 404 (e.g. the folder was deleted or moved in Drive), use this to set them up again.</span>
       </div>` : '';
     return `${banner}${cards}`;
   },
@@ -1108,6 +1112,7 @@ async findOrCreateFolder(name, parentId){
      try{
           const ongoingId = await this.findOrCreateFolder('Ongoing Projects', null);
      const projectFolderId = await this.findOrCreateFolder(p.name, ongoingId);
+     p.driveFolderId = projectFolderId;
 
      let existingTitles = [];
      if(p.sheetId){
